@@ -1,0 +1,13 @@
+# C++ object files (if we use C++)
+*.o
+*.d
+
+# Hidden dot files.
+.*
+
+# Python bytecode files
+*.pyc
+__pycache__
+
+# Our executable.
+server
