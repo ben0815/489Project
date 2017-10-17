@@ -1,11 +1,11 @@
-# C++ object files (if we use C++)
+# C++ object files (if we use C++).
 *.o
 *.d
 
 # Hidden dot files.
 .*
 
-# Python bytecode files
+# Python bytecode files.
 *.pyc
 __pycache__
 
