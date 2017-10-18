@@ -2,8 +2,13 @@
 # Code for an extremely basic lexer. Needs minor tweaks to satisfy the spec details.
 
 tokens = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
-	      '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR', 
-	      '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' : 	       'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' : 		      'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' : 		      'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' : 	       'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' : 	  	        'RIGHT', 'delegate' : 'RIGHT'}
+	  '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR', 
+	  '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' : 	       
+	  'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' : 		      
+	  'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' : 		      
+	  'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' : 	       
+	  'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' : 	  	        
+	  'RIGHT', 'delegate' : 'RIGHT'}
 
 def lexer(text):
     text = text.splitlines()
@@ -42,7 +47,7 @@ def lexer(text):
                 lexed.append([tokens[line[i]], line[i]])
                 word = ''
                 i += 1
-            # If current char is parenthesis, find next parenthesis.
+            # If current char is quotation, find next quotation.
             elif line[i] == '"':
                 i += 1
                 while line[i] != '"':
