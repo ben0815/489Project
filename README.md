@@ -1,4 +1,4 @@
-# 489Project
+# 489Project - Team Maroon Hat
 CSCE 489 Software Security Project
 
 
