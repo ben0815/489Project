@@ -8,6 +8,3 @@
 # Python bytecode files.
 *.pyc
 __pycache__
-
-# Our executable.
-server
