@@ -1,13 +1,13 @@
 import re
 
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
-	  '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
-	  '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
-	  'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
-	  'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
-	  'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
-	  'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' :
-	  'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
+      '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
+      '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
+      'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
+      'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
+      'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
+      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' :
+      'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
 
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 
@@ -26,13 +26,13 @@ punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 # alphanumeric start with alphavetic, can have underscore
 # distince from key words
 def isIdentifierFormat(str):
-	if str in token_map: # cannot be the same as a key word
-		return False
-	if len(str) > 255:
-		return False
-	if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # test more rigorously
-		return False
-	return True
+    if str in token_map: # cannot be the same as a key word
+        return False
+    if len(str) > 255:
+        return False
+    if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # test more rigorously
+        return False
+    return True
 
 def getValue(i, tokens):
         if i < len(tokens) and tokens[i][0] == 'IDENTIFIER':
@@ -176,10 +176,12 @@ def lexer(text):
 
 class Parser:
     
-	@staticmethod
-	def is_formatted_correct(tokens):
-		# Check that first line is 'as principal p password s do \n'
-		if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
+    @staticmethod
+    def is_formatted_correct(tokens):
+    
+        # Check that first line is 'as principal p password s do \n'
+        if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
+        
             status_list.append('{"status":"FAILED"}')
             return False
 
@@ -187,10 +189,10 @@ class Parser:
         if tokens[len(tokens) - 1 ][0] != 'END':
             status_list.append('{"status":"FAILED"}')
             return False
-	
-		return True
-	
-	@staticmethod
+    
+        return True
+    
+    @staticmethod
     def parse(command):
         status_list = []
         tokens = lexer(command)
@@ -198,8 +200,8 @@ class Parser:
         tokens.pop(0)
         
         if not is_formatted_correct(tokens):
-			return status_list
-			
+            return status_list
+            
         # Now execute the commands
         i = 7
         while i < len(tokens):
