@@ -50,9 +50,6 @@ class TCPServer:
 # TCP handler class used as an argument to the TCP server. This allows us to
 # overload handling functions to send the incoming data to our parser.
 class TCPHandler(socketserver.BaseRequestHandler):
-
-    parser = Parser()
-
     def handle(self):
         # Input programs can be a maximum of 1,000,000 characters.
         data = self.request.recv(1000000).strip()
@@ -65,6 +62,6 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         print('Received program:', data)
 
-        response = self.parser.parse(data)
+        response = Parser.parse(data)
 
         self.request.sendall(response.encode('utf-8'))
