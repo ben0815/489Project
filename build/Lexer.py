@@ -1,4 +1,4 @@
-# Tested on Python 2.7.12
+# Tested on Python 3.5.2
 # Code for an extremely basic lexer. Needs minor tweaks to satisfy the spec details.
 
 tokens = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
@@ -72,7 +72,7 @@ def lexer(text):
             else:
                 lexed.append(['IDENTIFIER', word])
                 word = ''
-    print(lexed)
+    return lexed
 
 # Testing using one of the examples pulled from the project spec
 lexer('as        principal admin password "admin" do\ncreate principal bob "B0BPWxxd"\nset x = "my string"\nset y ={f1=x,f2="field2"}\nset     delegation x admin read-> bob\nreturn y . f1\n***')
