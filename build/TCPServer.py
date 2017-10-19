@@ -62,6 +62,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         print('Received program:', data)
 
-        response = Parser.parse(data)
+        status_list = Parser.parse(data)
+
+        # Convert status list to appropriate response.
+        response = ''
+        for status in status_list:
+            response += status + '\n'
 
         self.request.sendall(response.encode('utf-8'))

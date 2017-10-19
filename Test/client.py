@@ -25,7 +25,7 @@ def main():
         sock.close()
 
     print('Sent:', data)
-    print('Received:', received)
+    print('Received:', received.decode('utf-8'))
 
 if __name__ == '__main__':
     main()
