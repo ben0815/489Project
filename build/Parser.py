@@ -81,7 +81,7 @@ def getExpr(i, tokens):
         if i < len(tokens) and tokens[i][0] != 'RBRACK':
             return False, i, None
         i += 1
-        return True, i, 'LIST'
+        return True, i, '[]'
     elif i < len(tokens) and (tokens[i][0] == 'IDENTIFIER' or tokens[i][0] == 'STRING'):
         return getValue(i, tokens)
     elif i < len(tokens) and tokens[i][0] == 'LPAR':
