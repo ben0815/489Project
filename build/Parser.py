@@ -16,21 +16,21 @@ punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 #TODO: Actually store the expressions (thinking separate entity for lists, dicts, and variables)
 #TODO: Implement all the little details of the spec. Actually check for FAILEDs and DENIEDs
 #TODO: Test the Parser more rigorously
+#TODO: will strings be passed to isStringFormat already have double quotes removed? I assumed no.
 
-# identifiers must be string formats
-# no more than 65535 characters
-# alphanumeric, spaces (no tabs newlines)
-#,;.?!-_
+def isStringFormat(str):
+    if len(str) > 65535: # max length
+        return False
+    if re.match('^\"[A-Za-z0-9_ ,;\.?!-]*\"$', str) is None: # reasonably tested, could test more
+        return False
+    return True
 
-# 255 length
-# alphanumeric start with alphavetic, can have underscore
-# distince from key words
 def isIdentifierFormat(str):
     if str in token_map: # cannot be the same as a key word
         return False
-    if len(str) > 255:
+    if len(str) > 255: # max length
         return False
-    if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # test more rigorously
+    if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # reasonably tested, could test more
         return False
     return True
 
@@ -139,6 +139,8 @@ def lexer(text):
                     if word in token_map:
                         lexed.append([token_map[word], word])
                     else:
+                        if not isIdentifierFormat(word):
+                            raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
 
                 lexed.append([token_map[line[i]], line[i]])
@@ -178,6 +180,8 @@ class Parser:
     
     @staticmethod
     def is_formatted_correct(tokens):
+    # idea is to have a function to make sure the program is syntactically correct
+    # and we dont make parse(command) a megafunction
     
         # Check that first line is 'as principal p password s do \n'
         if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
@@ -195,7 +199,12 @@ class Parser:
     @staticmethod
     def parse(command):
         status_list = []
-        tokens = lexer(command)
+        try:
+            tokens = lexer(command)
+        except ParseError:
+            status_list.append("FAILED") # I think this is all we need to do
+            return status_list
+        
         # Remove the first element (guaranteed to be NEWLINE token)
         tokens.pop(0)
         
