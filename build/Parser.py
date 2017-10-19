@@ -1,3 +1,5 @@
+import re
+
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
 	  '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
 	  '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
@@ -15,6 +17,22 @@ punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 #TODO: Implement all the little details of the spec. Actually check for FAILEDs and DENIEDs
 #TODO: Test the Parser more rigorously
 
+# identifiers must be string formats
+# no more than 65535 characters
+# alphanumeric, spaces (no tabs newlines)
+#,;.?!-_
+
+# 255 length
+# alphanumeric start with alphavetic, can have underscore
+# distince from key words
+def isIdentifierFormat(str):
+	if str in token_map: # cannot be the same as a key word
+		return False
+	if len(str) > 255:
+		return False
+	if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # test more rigorously
+		return False
+	return True
 
 def getValue(i, tokens):
         if i < len(tokens) and tokens[i][0] == 'IDENTIFIER':
@@ -157,22 +175,31 @@ def lexer(text):
     return lexed
 
 class Parser:
-    @staticmethod
+    
+	@staticmethod
+	def is_formatted_correct(tokens):
+		# Check that first line is 'as principal p password s do \n'
+		if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
+            status_list.append('{"status":"FAILED"}')
+            return False
+
+        # Check that the last line is '***'
+        if tokens[len(tokens) - 1 ][0] != 'END':
+            status_list.append('{"status":"FAILED"}')
+            return False
+	
+		return True
+	
+	@staticmethod
     def parse(command):
         status_list = []
         tokens = lexer(command)
         # Remove the first element (guaranteed to be NEWLINE token)
         tokens.pop(0)
-        # Check that first line is 'as principal p password s do \n'
-        if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
-            status_list.append('{"status":"FAILED"}')
-            return status_list
-
-        # Check that the last line is '***'
-        if tokens[len(tokens) - 1 ][0] != 'END':
-            status_list.append('{"status":"FAILED"}')
-            return status_list
-
+        
+        if not is_formatted_correct(tokens):
+			return status_list
+			
         # Now execute the commands
         i = 7
         while i < len(tokens):
