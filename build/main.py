@@ -23,7 +23,7 @@ def main():
     
     
     x = Parser()
-    print(x.parse('as        principal admin password "admin" do\ncreate principal bob "settler"\nset x = "my string"\nset y ={f1=x,f2="field2"}\nset     delegation x admin read-> bob\nreturn y . f1\n***'))
+    print(x.parse('as        principal admin password "admin" do\ncreate principal bob "settler"\nset x = testing\nset     delegation x admin read-> bob\nreturn y . f1\n***'))
 
 
 if __name__ == '__main__':
