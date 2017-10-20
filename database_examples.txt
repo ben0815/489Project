@@ -1,0 +1,20 @@
+User Database: {item, item}
+	Format:
+	{"id" : "Name", "Password" : "pass"}
+	
+	Example:
+	{"id" : "bob", "Password" : "bobpass"}
+	{"id" : "dave", "Password" : "davepass"}
+
+# Note1: for global, giving a user permissions to write, should also infer read access OR not be possible unless user is first given read access
+# Note2: append permission should also infer write OR not be possible unless write is given first (read not needed for append)
+	#Note2.1: cases in Note1 and Note 2 may contradict, since read IS needed for write, and write IS needed for append, but read IS NOT needed for append
+
+Global Variables Database: {item, list[list{items...}, list{items...}, list{items...}, list{items...}]}
+	
+	Format:
+	{"id" : "Name", "permissions" : [{"read" : {"user1", "user2"}, "write" : {"user1"}, "append" : {"user1"}, "delegate" : {"user1"}}]}
+	
+	Example:
+	{"id" : "msg", "permissions" : [{"read" : {"bob", "dave"}, "write" : {"bob"}, "append" : {"bob"}, "delegate" : {"bob"}}]}
+	{"id" : "x", "permissions" : [{"read" : {"bob", "dave"}, "write" : {"dave", "bob"}, "append" : {"dave", "bob"}, "delegate" : {"dave"}}]}
