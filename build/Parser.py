@@ -1,19 +1,22 @@
+import re
+
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
-	  '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
-	  '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
-	  'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
-	  'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
-	  'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
-	  'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' :
-	  'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
+      '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
+      '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
+      'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
+      'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
+      'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
+      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' :
+      'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
 
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
-	  
+
 #TODO: Create function for expect, instead of ugly if-statements.
 #TODO: Need to check that i is still less than len(tokens) even if expect is a success
 #TODO: Actually store the expressions (thinking separate entity for lists, dicts, and variables)
 #TODO: Implement all the little details of the spec. Actually check for FAILEDs and DENIEDs
 #TODO: Test the Parser more rigorously
+#TODO: will strings be passed to isStringFormat already have double quotes removed? I assumed no.
 
 def isStringFormat(str):
     if len(str) > 65535: # max length
@@ -82,8 +85,8 @@ def getFieldVals(i, tokens):
         elif not expect(i, tokens, 'COMMA'):
             return False, i, None
     
-    return False, i, None         
-            
+    return False, i, None   
+
 def getExpr(i, tokens):
     if expect(i, tokens, 'LBRACK'):
         i += 1
@@ -95,8 +98,8 @@ def getExpr(i, tokens):
     elif expect(i, tokens, 'LPAR'):
         return getFieldVals(i, tokens)
     else:
-        return False, i, None  
-    
+        return False, i, None
+
 def lexer(text):
     text = text.splitlines()
     lexed = []
@@ -168,6 +171,14 @@ def lexer(text):
     return lexed
 
 class Parser:
+    # def is_formatted_correct(tokens):
+    # idea is to have a function to make sure the program is syntactically correct
+    # and we dont make parse(command) a megafunction
+    # Check that first line is 'as principal p password s do \n'
+        # if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
+            # status_list.append('{"status":"FAILED"}')
+            # return False
+    
     @staticmethod
     def parse(command):
         status_list = []
@@ -413,6 +424,4 @@ class Parser:
             else:
                 return ['{"status":"FAILED"}']
 
-        return status_list 
-
-
+        return status_list
