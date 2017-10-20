@@ -177,15 +177,15 @@ def lexer(text):
     return lexed
 
 class Parser:
-    
+
     @staticmethod
     def is_formatted_correct(tokens):
     # idea is to have a function to make sure the program is syntactically correct
     # and we dont make parse(command) a megafunction
-    
+
         # Check that first line is 'as principal p password s do \n'
         if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
-        
+
             status_list.append('{"status":"FAILED"}')
             return False
 
@@ -193,9 +193,9 @@ class Parser:
         if tokens[len(tokens) - 1 ][0] != 'END':
             status_list.append('{"status":"FAILED"}')
             return False
-    
+
         return True
-    
+
     @staticmethod
     def parse(command):
         status_list = []
@@ -204,13 +204,13 @@ class Parser:
         except ParseError:
             status_list.append("FAILED") # I think this is all we need to do
             return status_list
-        
+
         # Remove the first element (guaranteed to be NEWLINE token)
         tokens.pop(0)
-        
+
         if not is_formatted_correct(tokens):
             return status_list
-            
+
         # Now execute the commands
         i = 7
         while i < len(tokens):
