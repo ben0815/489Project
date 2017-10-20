@@ -1,4 +1,5 @@
 import re
+from Error import ParseError
 
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
       '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
@@ -54,6 +55,8 @@ def getValue(i, tokens):
                 return True, i, x + '.' + y
             else:
                 return False, i, None
+        elif expect(i, tokens, 'RPAR'):
+            return True, i, x
         else:
             return True, (i - 1), x
     # s
@@ -84,7 +87,7 @@ def getFieldVals(i, tokens):
             return True, i, value
         elif not expect(i, tokens, 'COMMA'):
             return False, i, None
-
+    
     return False, i, None
 
 def getExpr(i, tokens):
@@ -121,8 +124,8 @@ def lexer(text):
                         word = ''
                         i += 1
                     else:
-                        if not isIdentifierFormat(word):
-                            raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                        #if not isIdentifierFormat(word):
+                        #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
                         word = ''
                         i += 1
@@ -134,8 +137,8 @@ def lexer(text):
                     if word in token_map:
                         lexed.append([token_map[word], word])
                     else:
-                        if not isIdentifierFormat(word):
-                            raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                        #if not isIdentifierFormat(word):
+                        #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
 
                 lexed.append([token_map[line[i]], line[i]])
@@ -151,6 +154,9 @@ def lexer(text):
                         return []
 
                 i += 1
+                #if not isStringFormat(word):
+                #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                    
                 lexed.append(['STRING', word])
                 word = ''
             elif word in token_map and (i + 1) < len(line) and line[i + 1] in punctuation:
@@ -172,20 +178,20 @@ def lexer(text):
 
 class Parser:
 
-    @staticmethod
-    def parse(command):
-        status_list = []
-        try:
-            tokens = lexer(command)
-        except ParseError:
-            status_list.append("FAILED") # I think this is all we need to do
-            return status_list
+    #@staticmethod
+    #def parse(command):
+    #    status_list = []
+    #    try:
+    #        tokens = lexer(command)
+    #    except ParseError:
+    #        status_list.append("FAILED") # I think this is all we need to do
+    #        return status_list
 
         # Remove the first element (guaranteed to be NEWLINE token)
-        tokens.pop(0)
+    #    tokens.pop(0)
 
-        if not is_formatted_correct(tokens):
-            return status_list
+    #    if not is_formatted_correct(tokens):
+    #        return status_list
 
     # def is_formatted_correct(tokens):
     # idea is to have a function to make sure the program is syntactically correct
@@ -198,12 +204,16 @@ class Parser:
     @staticmethod
     def parse(command):
         status_list = []
-        tokens = lexer(command)
+
+        try:
+            tokens = lexer(command)     
+        except ParseError:
+            return ['{"status":"FAILED"}']
 
         # Check if lexer failed
         if len(tokens) < 1:
             return ['{"status":"FAILED"}']
-
+        
         tokens.pop(0)
 
         # Check that first line is 'as principal p password s do'

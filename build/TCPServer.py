@@ -34,7 +34,9 @@ class TCPServer:
             exit(63)
 
         print('Server started on port', self.port)
-
+        
+        # INPUT PARSER
+        print(Parser.parse('as        principal admin password "admin" do\ncreate principal bob "settler"\nset x = {x = test}\nset     delegation x admin read-> bob\nreturn y . f1\n***'))
         self.server.serve_forever()
 
     # Handle SIGTERM signals gracefully. For our purposes the server should
