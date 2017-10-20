@@ -172,20 +172,20 @@ def lexer(text):
 
 class Parser:
 
-    @staticmethod
-    def parse(command):
-        status_list = []
-        try:
-            tokens = lexer(command)
-        except ParseError:
-            status_list.append("FAILED") # I think this is all we need to do
-            return status_list
+    #@staticmethod
+    #def parse(command):
+    #    status_list = []
+    #    try:
+    #        tokens = lexer(command)
+    #    except ParseError:
+    #        status_list.append("FAILED") # I think this is all we need to do
+    #        return status_list
 
         # Remove the first element (guaranteed to be NEWLINE token)
-        tokens.pop(0)
+    #    tokens.pop(0)
 
-        if not is_formatted_correct(tokens):
-            return status_list
+    #    if not is_formatted_correct(tokens):
+    #        return status_list
 
     # def is_formatted_correct(tokens):
     # idea is to have a function to make sure the program is syntactically correct
