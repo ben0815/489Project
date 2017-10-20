@@ -5,8 +5,6 @@ from Parser import Parser
 
 
 class TCPServer:
-    parser = Parser()
-
     # TCP server constructor.
     def __init__(self, port):
         # Make sure the port is valid.
