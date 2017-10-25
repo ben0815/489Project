@@ -8,7 +8,7 @@ import copy
     change password:             done
     set (set_command):           started
     append (append_command):     not started
-    local (local_commad):        not started
+    local (local_commad):        done
     foreach:                     not started
     set delegation:              started
     delete delegation:           not started
@@ -90,6 +90,22 @@ class Database:
         # make sure caller has the right
             pass
         # ill do it on sunday 
+
+    # local
+    # NOTE: possibly need to check if user has permission to read existing...
+    # Cont: would be possible to local x = some_file which you dont have read access to...
+    # Cont: then read x. But this isnt in specification.
+    def local(self, new_var, existing_var):
+        # Check if new_var exists
+	if new_var in self.local or self.var:
+            return '{"status":"FAILED"}'
+
+        # Check existing_var exists
+        if existing_var not in self.var:
+            return '{"status":"FAILED"}'
+
+	self.local[new_var] = self.var[existing_var]
+        return '{"status":"LOCAL"}'
         
     # helper function 
     def get_table(self, var_name):
