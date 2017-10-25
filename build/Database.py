@@ -74,7 +74,12 @@ class Database:
         
     # set is a keyword in python actually
     def set_command(self, caller, var_name, value):
-        # i am not sure, does the user always have rights to local variables? 
+        if var_name not in self.local or self.var:
+            self.var[var_name] = value
+        elif var_name in self.local:
+            self.local[var_name] = value
+        elif var_name in self.var:
+            self.var[var_name] = value
     
         return '{"status":"SET"}'
         
