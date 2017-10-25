@@ -124,6 +124,17 @@ class Database:
         self.get_table(list_name)[list_name] = new_list
         return '{"status":"FOREACH"}'
         
+    def append_command(self, caller, list_name, expr):
+    # appends to x with expr
+    list_var = self.get_val(list_name)
+    if list_var is None:
+        raise ParseError("list_name is undefined")
+    if type(list_var) != list:
+        raise ParseError("x must be of type list to append to it")
+    if list_name not in self.user[caller]['r'] or list_name not in self.user[caller]['w']:
+        raise SecurityError("User does not have read or write access to this list")
+
+
 
     # helper function 
     def get_table(self, var_name):
