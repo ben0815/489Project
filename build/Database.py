@@ -98,14 +98,14 @@ class Database:
     # Cont: then read x. But this isnt in specification.
     def local(self, new_var, existing_var):
         # Check if new_var exists
-	if new_var in self.local or self.var:
-            raise ParseError("Local: new_var already exists")
+        if new_var in self.local or self.var:
+                raise ParseError("Local: new_var already exists")
 
         # Check existing_var exists
         if existing_var not in self.var:
             raise ParseError("Local: existing_var does not exist")
 
-	self.local[new_var] = self.var[existing_var]
+        self.local[new_var] = self.var[existing_var]
         return '{"status":"LOCAL"}'
 
 
@@ -145,15 +145,27 @@ class Database:
         
     def append_command(self, caller, list_name, expr):
     # appends to x with expr
-    list_var = self.get_val(list_name)
-    if list_var is None:
-        raise ParseError("list_name is undefined")
-    if type(list_var) != list:
-        raise ParseError("x must be of type list to append to it")
-    if list_name not in self.user[caller]['r'] or list_name not in self.user[caller]['w']:
-        raise SecurityError("User does not have read or write access to this list")
+        list_var = self.get_val(list_name)
+        if list_var is None:
+            raise ParseError("list_name is undefined")
+        if type(list_var) != list:
+            raise ParseError("x must be of type list to append to it")
+        if list_name not in self.user[caller]['a'] and list_name not in self.user[caller]['w']:
+            raise SecurityError("User does not have read or write access to this list")
 
+        try:
+            value = expr # make it evaluate expr, either with helper function or part of parser
+        except SecurityError as e:
+            raise e
+        except ParseError as e:
+            raise e
 
+        if type(value) == list:
+            self.get_table[list_name] = list_var + value
+        else:
+            self.get_table[list_name].append(value)
+
+        return '{"status":"APPEND"}'
 
     # helper function 
     def get_table(self, var_name):
