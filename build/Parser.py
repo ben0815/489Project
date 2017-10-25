@@ -124,8 +124,8 @@ def lexer(text):
                         word = ''
                         i += 1
                     else:
-                        #if not isIdentifierFormat(word):
-                        #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                        if not isIdentifierFormat(word):
+                            raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
                         word = ''
                         i += 1
@@ -137,8 +137,8 @@ def lexer(text):
                     if word in token_map:
                         lexed.append([token_map[word], word])
                     else:
-                        #if not isIdentifierFormat(word):
-                        #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                        if not isIdentifierFormat(word):
+                            raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
 
                 lexed.append([token_map[line[i]], line[i]])
@@ -154,8 +154,8 @@ def lexer(text):
                         return []
 
                 i += 1
-                #if not isStringFormat(word):
-                #    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
+                if not isStringFormat('"' + word + '"'):
+                    raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                     
                 lexed.append(['STRING', word])
                 word = ''
