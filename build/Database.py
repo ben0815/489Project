@@ -10,7 +10,7 @@ import copy
     append (append_command):     started
     local (local_commad):        done
     foreach:                     started
-    set delegation:              started
+    set delegation:              done
     delete delegation:           not started
     default delegator:           done
 """
@@ -22,7 +22,6 @@ class Database:
         self.local = {} # local variables, clear after program
         
         self.default_delegator = None
-
 
     def default_delegator(self, caller, user):
         if caller != "admin":
@@ -79,17 +78,25 @@ class Database:
     
         return '{"status":"SET"}'
         
-    def set_delegation(self, caller, right, target, user_getting_rights):
+    def set_delegation(self, caller, user_giving_rights, right, target, user_getting_rights):
         if user_getting_rights not in self.user or caller not in self.user:
             raise ParseError("Caller and user getting  rights must exist.")
-        
+        if caller != user_getting_rights and caller != "admin":
+            raise SecurityError("Caller must be admin or the user user_giving_rights")
+
+
         if target == "all":
-            pass #welp
-        
+            for item in self.user[user_giving_rights]['d']:
+                self.user[user_getting_rights][right].add(item) # should I check to see if right is rwad,or is this already done?
+
         else: # set a specific right
-        # make sure caller has the right
-            pass
-        # ill do it on sunday 
+            if target not in self.var:
+                raise ParseError("target is not a global variable")
+            if target not in self.user[user_giving_rights]['d']:
+                raise SecurityError("user_giving_rights does not have delegation rights over target")
+            self.user[user_getting_rights][right].add(target)
+        
+        return '{"status":"SET_DELEGATION"}'
 
 
     # local
@@ -107,6 +114,8 @@ class Database:
 
         self.local[new_var] = self.var[existing_var]
         return '{"status":"LOCAL"}'
+
+
 
 
     # foreach (element y) in (list x) replacewith <expr>
@@ -142,8 +151,17 @@ class Database:
         self.get_table(list_name)[list_name] = new_list
         return '{"status":"FOREACH"}'
 
+
+    def get_expr_value(self, input, input_type):
+    # not sure if this is what I need
+    # a.x, identifier, a string, [], records, fieldvariables
+    # make sure the user has access to this value
+        if isIdentifierFormat(input) and self.get_val(input):
+            return self.get_val(input) # I think this returns the value of input
+    #TODO FINISH
         
-    def append_command(self, caller, list_name, expr):
+    # parser will call htis function with the value the expr evaluate
+    def append_command(self, caller, list_name, expr): 
     # appends to x with expr
         list_var = self.get_val(list_name)
         if list_var is None:
@@ -152,7 +170,7 @@ class Database:
             raise ParseError("x must be of type list to append to it")
         if list_name not in self.user[caller]['a'] and list_name not in self.user[caller]['w']:
             raise SecurityError("User does not have read or write access to this list")
-
+ 
         try:
             value = expr # make it evaluate expr, either with helper function or part of parser
         except SecurityError as e:
