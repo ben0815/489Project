@@ -7,11 +7,11 @@ import copy
     create principal:            done
     change password:             done
     set (set_command):           started
-    append (append_command):     not started
-    local (local_commad):        done
-    foreach:                     not started
+    append (append_command):     started
+    local (local_commad):        done (See Note)
+    foreach:                     started
     set delegation:              started
-    delete delegation:           not started
+    delete delegation:           started
     default delegator:           done
 """
 class Database:
@@ -90,6 +90,29 @@ class Database:
         # make sure caller has the right
             pass
         # ill do it on sunday 
+
+    # delete del
+    def delete_delegation(self, caller, right, target, user_losing_rights):
+        if user_losing_rights not in self.user or caller not in self.user:
+            raise ParseError("Delete_del: Caller and user losing rights must exist")
+
+        if target not in self.var:
+            raise ParseError("Delete_del: target not in global")
+
+        if target in self.local:
+            raise ParseError("Delete_del: target exists in local")
+
+        # check if caller is admin or has delegate permission on target
+        if caller != "admin": # or self.user[caller].
+            # raise SecurityError("Delete_del: Caller must be admin or had delegation on target")
+        
+        # all users or single user
+        if user_losing_rights == "anyone":
+            pass
+        else:
+            pass
+            
+
 
 
     # local
