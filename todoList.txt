@@ -1,0 +1,13 @@
+Database:
+
+create principal:            done
+change password:             done
+set (set_command):           started
+append (append_command):     not started
+local (local_commad):        done (see Note)
+foreach:                     not started
+set delegation:              started
+delete delegation:           not started
+default delegator:           done
+    
+Parser: 

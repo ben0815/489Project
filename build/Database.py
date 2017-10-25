@@ -91,6 +91,7 @@ class Database:
             pass
         # ill do it on sunday 
 
+
     # local
     # NOTE: possibly need to check if user has permission to read existing...
     # Cont: would be possible to local x = some_file which you dont have read access to...
@@ -98,15 +99,51 @@ class Database:
     def local(self, new_var, existing_var):
         # Check if new_var exists
 	if new_var in self.local or self.var:
-            return '{"status":"FAILED"}'
+            raise ParseError("Local: new_var already exists")
 
         # Check existing_var exists
         if existing_var not in self.var:
-            return '{"status":"FAILED"}'
+            raise ParseError("Local: existing_var does not exist")
 
 	self.local[new_var] = self.var[existing_var]
         return '{"status":"LOCAL"}'
+
+
+    # foreach (element y) in (list x) replacewith <expr>
+    def for_each(self, caller, element, list_name, expr):
+        list_var = self.get_val(list_name) 
+        if list_var is None:
+            raise ParseError("list is not defined") 
+
+        element_var = self.get_val(element)
+        if element_var is not None:
+            raise ParseError("y is already defined")
+        if list_name not in self.user[caller]['r'] or list_name not in self.user[caller]['w']:
+            raise SecurityError("user does not have read and write permission on x")
+
+        # how this works honestly depends on how we are storing lists in our database, I assume we are storing it as a []
+        if type(list_var) != list:
+            raise ParseError('x must be a list')
+
+        new_list = [] # we want to make a separate list for the new values, because if any expr fails the whole thing fails and we need to revert
+        for index in range(list_var):
+            try:
+                value = expr # TODO need do evaluate this expression. either write helper function or use part of the parser
+                if type(value) == list:
+                    raise ParseError("Expression cannot evaluate to list")
+            except SecurityError as e: # converting expression failed
+                raise e
+            except ParseError as e:
+                raise e
+
+            new_list[index] = value
+
+        # set new list to its value
+        self.get_table(list_name)[list_name] = new_list
+        return '{"status":"FOREACH"}'
+
         
+
     # helper function 
     def get_table(self, var_name):
         if var_names in self.local:
