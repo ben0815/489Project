@@ -3,9 +3,9 @@ Database:
 create principal:            done
 change password:             done
 set (set_command):           started
-append (append_command):     not started
+append (append_command):     started
 local (local_commad):        done (see Note)
-foreach:                     not started
+foreach:                     done
 set delegation:              started
 delete delegation:           not started
 default delegator:           done
