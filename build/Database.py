@@ -7,9 +7,9 @@ import copy
     create principal:            done
     change password:             done
     set (set_command):           started
-    append (append_command):     not started
+    append (append_command):     started
     local (local_commad):        done
-    foreach:                     not started
+    foreach:                     started
     set delegation:              started
     delete delegation:           not started
     default delegator:           done
