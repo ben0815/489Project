@@ -8,7 +8,7 @@ import copy
     change password:             done
     set (set_command):           started
     append (append_command):     started
-    local (local_commad):        done
+    local (local_commad):        done (See Note)
     foreach:                     started
     set delegation:              done
     delete delegation:           not started
@@ -97,6 +97,29 @@ class Database:
             self.user[user_getting_rights][right].add(target)
         
         return '{"status":"SET_DELEGATION"}'
+
+    # delete del
+    def delete_delegation(self, caller, right, target, user_losing_rights):
+        if user_losing_rights not in self.user or caller not in self.user:
+            raise ParseError("Delete_del: Caller and user losing rights must exist")
+
+        if target not in self.var:
+            raise ParseError("Delete_del: target not in global")
+
+        if target in self.local:
+            raise ParseError("Delete_del: target exists in local")
+
+        # check if caller is admin or has delegate permission on target
+        if caller != "admin": # or self.user[caller].
+            # raise SecurityError("Delete_del: Caller must be admin or had delegation on target")
+        
+        # all users or single user
+        if user_losing_rights == "anyone":
+            pass
+        else:
+            pass
+            
+
 
 
     # local
