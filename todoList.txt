@@ -2,12 +2,12 @@ Database:
 
 create principal:            done
 change password:             done
-set (set_command):           started
+set (set_command):           started (basics added, need to check for permissions)
 append (append_command):     started
 local (local_commad):        done (see Note)
 foreach:                     done
-set delegation:              started
-delete delegation:           not started
+set delegation:              done
+delete delegation:           not started (need to check for permissions)
 default delegator:           done
     
 Parser: 
