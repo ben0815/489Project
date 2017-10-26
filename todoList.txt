@@ -1,17 +1,9 @@
 Database:
 
 not sure if default delegator is being done right, take a look at this
-can admin remove delegations from themselves?
-    - should we keep admin permissions updated alongside others, or just bypass permissions when caller is admin (currently doing the           latter)
 need to implement 'anyone' for some of these
 need to get password for admin to database somehow
 need to not check accesses when caller is admin or when variable is local
-need to implement rollbacks:
-    idea:
-        Via lists, keep track of globals added, locals added, principals created, etc.
-            - Globals added will store original value and variable name, etc.
-        Before raising error in database or parser:
-            Call rollback function remove all changes.
 
 create principal:            done
 change password:             done
@@ -26,8 +18,6 @@ as principal:                done
     
 Parser: 
 
-comments
-integration
 clear local variables after each run
 test all functionalities
 clean up code
