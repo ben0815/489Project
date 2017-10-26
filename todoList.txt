@@ -12,13 +12,14 @@ need to implement rollbacks:
 
 create principal:            done
 change password:             done
-set (set_command):           started (basics added, need to check for permissions)
-append (append_command):     started
-local (local_commad):        done (see Note)
+set (set_command):           done
+append (append_command):     done
+local (local_commad):        done
 foreach:                     done
 set delegation:              done
 delete delegation:           done
 default delegator:           done
+as principal:                done
     
 Parser: 
 
