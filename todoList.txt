@@ -1,5 +1,8 @@
 Database:
 
+not sure if default delegator is being done right, take a look at this
+can admin remove delegations from themselves?
+    - should we keep admin permissions updated alongside others, or just bypass permissions when caller is admin (currently doing the           latter)
 need to implement 'anyone' for some of these
 need to get password for admin to database somehow
 need to not check accesses when caller is admin or when variable is local
@@ -25,3 +28,7 @@ Parser:
 
 comments
 integration
+clear local variables after each run
+test all functionalities
+clean up code
+
