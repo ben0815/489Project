@@ -1,5 +1,7 @@
 import re
 from Error import ParseError
+from Error import SecurityError
+from Database import Database
 
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
       '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
@@ -7,8 +9,7 @@ token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'd
       'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
       'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
       'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
-      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'append' :
-      'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
+      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
 
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 
@@ -17,7 +18,7 @@ punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 #TODO: Actually store the expressions (thinking separate entity for lists, dicts, and variables)
 #TODO: Implement all the little details of the spec. Actually check for FAILEDs and DENIEDs
 #TODO: Test the Parser more rigorously
-#TODO: will strings be passed to isStringFormat already have double quotes removed? I assumed no.
+#TODO: will strings be passed to isStringFormat already have double quotes removed? I assumed no./ 
 
 def isStringFormat(str):
     if len(str) > 65535: # max length
@@ -35,6 +36,11 @@ def isIdentifierFormat(str):
         return False
     return True
 
+def isCommentFormat(str):
+    if re.match('[\/][\/][A-Za-z0-9_ ,;\.?!-]*$', str) is None:
+        return False
+    return True
+
 def expect(i, tokens, expected):
     if i < len(tokens) and tokens[i][0] != expected:
         return False
@@ -43,7 +49,7 @@ def expect(i, tokens, expected):
     else:
         return True
 
-def getValue(i, tokens):
+def getValue(i, tokens, user):
     if expect(i, tokens, 'IDENTIFIER'):
         x = tokens[i][1]
         i += 1
@@ -52,13 +58,13 @@ def getValue(i, tokens):
             # x.y
             if expect(i, tokens, 'IDENTIFIER'):
                 y = tokens[i][1]
-                return True, i, x + '.' + y
+                return True, i, database.get_record_value(user, x, y)
             else:
                 return False, i, None
-        elif expect(i, tokens, 'RPAR'):
-            return True, i, x
+        elif expect(i, tokens, 'RPAR') or expect(i, tokens, 'COMMA'):
+            return True, i, database.get_identifier_value(user, x)
         else:
-            return True, (i - 1), x
+            return True, (i - 1), database.get_identifier_value(user, x)
     # s
     elif expect(i, tokens, 'STRING'):
         s = tokens[i][1]
@@ -66,40 +72,55 @@ def getValue(i, tokens):
     else:
         return False, i, None
 
-def getFieldVals(i, tokens):
-    value = ''
+def getFieldVals(i, tokens, user):
+    values = {}
     i += 1
     while i < len(tokens):
         if not expect(i, tokens, 'IDENTIFIER'):
             return False, i, None
+        
+        ident = tokens[i][1]
+        
+        if ident in values:
+            raise ParseError    
+        
         i += 1
         if not expect(i, tokens, 'EQUALS'):
             return False, i, None
+            
         i += 1
-        status, i, temp = getValue(i, tokens)
-
+        status, i, temp = getValue(i, tokens, user)
+        
+        if expect(i, tokens, 'STRING'):
+            i += 1
+        
         if not status:
             return False, i, None
-
-        value += temp
+        
+        if isinstance(temp, list) or isinstance(temp, dict):
+            raise ParseError
+        
+        values[ident] = temp     
 
         if expect(i, tokens, 'RPAR'):
-            return True, i, value
+            return True, i, values
         elif not expect(i, tokens, 'COMMA'):
             return False, i, None
+        else:
+            i += 1
     
     return False, i, None
 
-def getExpr(i, tokens):
+def getExpr(i, tokens, user):
     if expect(i, tokens, 'LBRACK'):
         i += 1
         if not expect(i, tokens, 'RBRACK'):
             return False, i, None
-        return True, i, '[]'
+        return True, i, []
     elif expect(i, tokens, 'IDENTIFIER') or expect(i, tokens, 'STRING'):
-        return getValue(i, tokens)
+        return getValue(i, tokens, user)
     elif expect(i, tokens, 'LPAR'):
-        return getFieldVals(i, tokens)
+        return getFieldVals(i, tokens, user)
     else:
         return False, i, None
 
@@ -108,32 +129,42 @@ def lexer(text):
     lexed = []
 
     for line in text:
+        i = 0
+        
+        #if 1 < len(line) and line[i + 1] == '/' and line[i] == '/':
+        #    print('hello')
+        #    break
+        
         lexed.append(['NEWLINE', '\n'])
         # TODO: Split on just spaces, not tabs
-        word = ''
-        i = 0
+        word = ""
+        
 
         # TODO: Verify that identifiers follow the spec. Alpha followed by alphanumeric
         # and underscore.
         while i < len(line):
+            if line[i] == '/':
+                if (i + 1) < len(line) and line[i + 1] == '/':
+                    break
+
             # Eat whitespace or append a new token
             if line[i] == ' ':
-                if word != '':
+                if word != "":
                     if word in token_map:
                         lexed.append([token_map[word], word])
-                        word = ''
+                        word = ""
                         i += 1
                     else:
                         if not isIdentifierFormat(word):
                             raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                         lexed.append(['IDENTIFIER', word])
-                        word = ''
+                        word = ""
                         i += 1
                 else:
                     i += 1
             # If current char is token, append previous state and new token.
             elif line[i] in token_map:
-                if word != '':
+                if word != "":
                     if word in token_map:
                         lexed.append([token_map[word], word])
                     else:
@@ -142,11 +173,13 @@ def lexer(text):
                         lexed.append(['IDENTIFIER', word])
 
                 lexed.append([token_map[line[i]], line[i]])
-                word = ''
+                word = ""
                 i += 1
             # If current char is quotation, find next quotation.
             elif line[i] == '"':
                 i += 1
+                if i == len(line):
+                        return []
                 while line[i] != '"':
                     word += line[i]
                     i += 1
@@ -158,53 +191,31 @@ def lexer(text):
                     raise ParseError("Identifier must contain only alphanumeric characters or underscores, be no greater than 255 characters, and not be one of the reserved keywords.")
                     
                 lexed.append(['STRING', word])
-                word = ''
+                word = ""
             elif word in token_map and (i + 1) < len(line) and line[i + 1] in punctuation:
                 lexed.append([token_map[word], word])
-                word = ''
+                word = ""
             else:
                 word += line[i]
                 i += 1
 
         # Get the last token
-        if word != '':
+        if word != "":
             if word in token_map:
                 lexed.append([token_map[word], word])
-                word = ''
+                word = ""
             else:
                 lexed.append(['IDENTIFIER', word])
-                word = ''
+                word = ""
     return lexed
+    
+database = Database() 
 
 class Parser:
-
-    #@staticmethod
-    #def parse(command):
-    #    status_list = []
-    #    try:
-    #        tokens = lexer(command)
-    #    except ParseError:
-    #        status_list.append("FAILED") # I think this is all we need to do
-    #        return status_list
-
-        # Remove the first element (guaranteed to be NEWLINE token)
-    #    tokens.pop(0)
-
-    #    if not is_formatted_correct(tokens):
-    #        return status_list
-
-    # def is_formatted_correct(tokens):
-    # idea is to have a function to make sure the program is syntactically correct
-    # and we dont make parse(command) a megafunction
-    # Check that first line is 'as principal p password s do \n'
-        # if not (len(tokens) > 6 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO' and tokens[6][0] == 'NEWLINE'):
-            # status_list.append('{"status":"FAILED"}')
-            # return False
-
     @staticmethod
     def parse(command):
         status_list = []
-
+        
         try:
             tokens = lexer(command)     
         except ParseError:
@@ -213,12 +224,21 @@ class Parser:
         # Check if lexer failed
         if len(tokens) < 1:
             return ['{"status":"FAILED"}']
-        
+
         tokens.pop(0)
 
         # Check that first line is 'as principal p password s do'
         if not (len(tokens) > 5 and tokens[0][0] == 'AS' and tokens[1][0] == 'PRINCIPAL' and tokens[2][0] == 'IDENTIFIER' and tokens[3][0] == 'PASSWORD' and tokens[4][0] == 'STRING' and tokens[5][0] == 'DO'):
             return ['{"status":"FAILED"}']
+        else:
+            try:
+                database.as_principal(tokens[2][1], tokens[4][1])
+            except ParseError:
+                return ['{"status":"FAILED"}']
+            except SecurityError:
+                return ['{"status":"DENIED"}']
+            
+            user = tokens[2][1]
 
         # Check that the last line is '***'
         if tokens[len(tokens) - 1 ][0] != 'END':
@@ -240,12 +260,18 @@ class Parser:
             # 'return <expr> \n' command
             elif expect(i, tokens, 'RETURN'):
                 i += 1
-                status, i, value = getExpr(i, tokens)
+                
+                try:
+                    status, i, value = getExpr(i, tokens, user)
 
-                if not status:
+                    if not status:
+                        return ['{"status":"FAILED"}']
+                except ParseError:
                     return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']
 
-                status_list.append('{"status":"RETURNING","output":"' + value + '"}')
+                status_list.append('{"status":"RETURNING","output":"' + str(value) + '"}')
                 i += 1
 
             # 'create principal p s'
@@ -257,12 +283,23 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
+                
+                p = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'STRING'):
                     return ['{"status":"FAILED"}']
 
-                status_list.append('{"status":"CREATE_PRINCIPAL"}')
+                s = tokens[i][1]
+                
+                try:
+                    message = database.create_principal(user, p, s)
+                except ParseError:
+                    return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']
+                
+                status_list.append(message)
                 i += 1
 
             # 'change password p s'
@@ -274,12 +311,23 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
+                
+                p = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'STRING'):
                     return ['{"status":"FAILED"}']
-
-                status_list.append('{"status":"CHANGE_PASSWORD"}')
+                    
+                s = tokens[i][1]
+                
+                try:
+                    message = database.change_password(user, p, s)
+                except ParseError:
+                    return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']
+                
+                status_list.append(message)
                 i += 1
 
             # 'append to x with <expr>'
@@ -291,21 +339,28 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
-
-                i += 1
-                if not expect(i, tokens, 'IDENTIFIER'):
-                    return ['{"status":"FAILED"}']
+                    
+                x = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'WITH'):
                     return ['{"status":"FAILED"}']
 
                 i += 1
-                status, i, value = getExpr(i, tokens)
-                if not status:
+                
+                try:
+                    status, i, value = getExpr(i, tokens, user)
+                
+                    if not status:
+                        return ['{"status":"FAILED"}']
+                    
+                    message = database.append_command(user, x, value)
+                except ParseError:
                     return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']                
 
-                status_list.append('{"status":"APPEND"}')
+                status_list.append(message)
                 i += 1
 
             # 'local x = expr'
@@ -313,17 +368,27 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
-
+                
+                x = tokens[i][1]
+                
                 i += 1
                 if not expect(i, tokens, 'EQUALS'):
                     return ['{"status":"FAILED"}']
 
                 i += 1
-                status, i, value = getExpr(i, tokens)
-                if not status:
+                try:
+                    status, i, value = getExpr(i, tokens, user)
+                    
+                    if not status:
+                        return ['{"status":"FAILED"}']
+                except ParseError:
                     return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']
+                     
+                message = database.set_local(x, value)
 
-                status_list.append('{"status":"LOCAL"}')
+                status_list.append(message)
                 i += 1
 
             # 'foreach y in x replacewith <expr>'
@@ -331,6 +396,8 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
+                    
+                y = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'IN'):
@@ -339,16 +406,38 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
+                    
+                x = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'REPLACE'):
                     return ['{"status":"FAILED"}']
-
+                    
                 i += 1
-                status, i, value = getExpr(i, tokens)
-                if not status:
+                
+                try:
+                    database.check_for_each(user, x, y)
+                    the_list = database.get_identifier_value(user, x)
+                    
+                    if not isinstance(the_list, list):
+                        return ['{"status":"FAILED"}']
+                        
+                    for j in range(0,len(the_list)):
+                        database.temporary_set(user, y, the_list[j])
+                        status, end_expr, value = getExpr(i, tokens, user)
+                        if not status:
+                            return ['{"status":"FAILED"}']
+                        the_list[j] = value
+                        
+                    database.set_command(user, x, the_list)    
+                        
+                    database.temporary_remove(user, y)
+                except ParseError:
                     return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']               
 
+                i = end_expr
                 status_list.append('{"status":"FOREACH"}')
                 i += 1
 
@@ -359,14 +448,20 @@ class Parser:
                     i += 1
                     if not expect(i, tokens, 'IDENTIFIER'):
                         return ['{"status":"FAILED"}']
+                        
+                    target = tokens[i][1]
 
                     i += 1
                     if not expect(i, tokens, 'IDENTIFIER'):
                         return ['{"status":"FAILED"}']
-
+                    
+                    q = tokens[i][1]
+                    
                     i += 1
-                    if not expect(i, tokens, 'RIGHT'):
+                    if not expect(i, tokens, 'RIGHT') or not expect(i, tokens, 'APPEND'):
                         return ['{"status":"FAILED"}']
+                        
+                    right = tokens[i][1]    
 
                     i += 1
                     if not expect(i, tokens, 'ARROW'):
@@ -376,21 +471,39 @@ class Parser:
                     if not expect(i, tokens, 'IDENTIFIER'):
                         return ['{"status":"FAILED"}']
 
-                    status_list.append('{"status":"SET_DELEGATION"}')
+                    p = tokens[i][1]
+                    
+                    try:
+                        message = database.set_delegation(user, q, right[0], target, p)
+                    except ParseError:
+                        return ['{"status":"FAILED"}']
+                    except SecurityError:
+                        return ['{"status":"DENIED"}']
+                        
+                    status_list.append(message)
                     i += 1
 
                 elif expect(i, tokens, 'IDENTIFIER'):
+                    x = tokens[i][1]
+                    
                     i += 1
                     if not expect(i, tokens, 'EQUALS'):
                         return ['{"status":"FAILED"}']
 
                     i += 1
-                    status, i, value = getExpr(i, tokens)
+                    try:
+                        status, i, value = getExpr(i, tokens, user)
 
-                    if not status:
+                        if not status:
+                            return ['{"status":"FAILED"}']
+                        
+                        message = database.set_command(user, x, value)
+                    except ParseError:
                         return ['{"status":"FAILED"}']
+                    except SecurityError:
+                        return ['{"status":"DENIED"}']                            
 
-                    status_list.append('{"status":"SET"}')
+                    status_list.append(message)
                     i += 1
 
                 else:
@@ -411,7 +524,7 @@ class Parser:
                     return ['{"status":"FAILED"}']
 
                 i += 1
-                if not expect(i, tokens, 'RIGHT'):
+                if not expect(i, tokens, 'RIGHT') or not expect(i, tokens, 'APPEND'):
                     return ['{"status":"FAILED"}']
 
                 i += 1
@@ -438,8 +551,17 @@ class Parser:
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     return ['{"status":"FAILED"}']
+                    
+                p = tokens[i][1]
+                
+                try:
+                    message = database.default_delegator(user, p)
+                except ParseError:
+                    return ['{"status":"FAILED"}']
+                except SecurityError:
+                    return ['{"status":"DENIED"}']
 
-                status_list.append('{"status":"DEFAULT_DELEGATOR"}')
+                status_list.append(message)
                 i += 1
 
             elif i < len(tokens) and tokens[i][0] == 'END':
