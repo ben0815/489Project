@@ -6,12 +6,12 @@ import sys
 
 def main():
     host = 'localhost'
-    port = 8080
+    port = 8082
 
     if len(sys.argv) > 1:
          port = int(sys.argv[1])
 
-    data = 'TESTING!'
+    data = "as principal bob password \"B0BPWxxd\" do\nset x = \"another string\"\nreturn x\n***\n"
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

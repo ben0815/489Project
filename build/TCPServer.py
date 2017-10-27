@@ -2,11 +2,12 @@ import sys
 import socketserver
 import signal
 from Parser import Parser
+from Error import ParseError
 
 
 class TCPServer:
     # TCP server constructor.
-    def __init__(self, port):
+    def __init__(self, port, password):
         # Make sure the port is valid.
         try:
             self.port = int(port)
@@ -16,9 +17,14 @@ class TCPServer:
 
             if port[0] == '0':
                 raise ValueError("Port must be a decimal value")
+                
+            Parser.set_password(password)
 
         except ValueError as e:
             print("Bad port:", str(e), file=sys.stderr)
+            sys.exit(255)
+        except ParseError:
+            print("Bad admin password format.")
             sys.exit(255)
 
         signal.signal(signal.SIGTERM, self.handle_sigterm)
@@ -35,8 +41,6 @@ class TCPServer:
 
         print('Server started on port', self.port)
         
-        # INPUT PARSER
-        print(Parser.parse('as principal admin password "admin" do\nset records = []\nappend to records with { name = "mike", date = "1-1-90" }\nappend to records with { name = "dave", date = "1-1-85" }\nlocal names = records\nforeach rec in names replacewith rec.name\nreturn names\n***'))
         self.server.serve_forever()
 
     # Handle SIGTERM signals gracefully. For our purposes the server should

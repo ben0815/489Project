@@ -21,10 +21,24 @@ class Database:
         self.user = {}
         self.user['admin'] = {}
         self.user['admin']['password'] = 'admin'
+        self.user['anyone'] = {}
+        self.user['anyone']['password'] = '#'
+        self.user['anyone']['r'] = set()
+        self.user['anyone']['w'] = set()
+        self.user['anyone']['a'] = set()
+        self.user['anyone']['d'] = set()
         self.var = {} # global variables only
         self.local = {} # local variables, clear after program
         
-        self.default_delegator = None
+        # state dictionaries are used to store the state of the program when a command is being run
+        # at rollback just set user, var to their initial states
+        self.user_state = {}
+        self.var_state = {}
+        
+        self.default_delegator = "anyone"
+        
+    def set_admin_password(self, password):
+        self.user['admin']['password'] = password
 
     def default_delegator(self, caller, user):
         if user not in self.user:
@@ -32,11 +46,7 @@ class Database:
         if caller != "admin":
             raise SecurityError("To create a principal you must be admin.")
         
-        self.default_delegator = {}
-        self.default_delegator['r'] = copy.deepcopy(self.user[user]['r'])
-        self.default_delegator['w'] = copy.deepcopy(self.user[user]['w'])
-        self.default_delegator['a'] = copy.deepcopy(self.user[user]['a'])
-        self.default_delegator['d'] = copy.deepcopy(self.user[user]['d'])
+        self.default_delegator = user
         
         return '{"status":"DEFAULT_DELEGATOR"}'
     
@@ -45,7 +55,10 @@ class Database:
             raise ParseError("Principal: " + caller + " does not exist.")
         
         if password != self.user[caller]['password']:
-            raise SecurityError("Invalid password.")    
+            raise SecurityError("Invalid password.")
+        
+        self.user_state = self.user
+        self.var_state = self.var 
     
     def create_principal(self, caller, new_user, password):
         if new_user in self.user:
@@ -58,16 +71,10 @@ class Database:
         
         self.user[new_user]["password"] = password
         
-        if self.default_delegator is None:
-            self.user[new_user]["r"] = set()
-            self.user[new_user]["w"] = set()
-            self.user[new_user]["a"] = set()
-            self.user[new_user]["d"] = set()
-        else:
-            self.user[new_user]["r"] = copy.deepcopy(self.default_delegator['r'])
-            self.user[new_user]["w"] = copy.deepcopy(self.default_delegator['w'])
-            self.user[new_user]["a"] = copy.deepcopy(self.default_delegator['a'])
-            self.user[new_user]["d"] = copy.deepcopy(self.default_delegator['d'])
+        self.user[new_user]["r"] = copy.deepcopy(self.user[self.default_delegator]['r'])
+        self.user[new_user]["w"] = copy.deepcopy(self.user[self.default_delegator]['w'])
+        self.user[new_user]["a"] = copy.deepcopy(self.user[self.default_delegator]['a'])
+        self.user[new_user]["d"] = copy.deepcopy(self.user[self.default_delegator]['d'])
             
         return '{"status":"CREATE_PRINCIPAL"}'
         
@@ -75,7 +82,7 @@ class Database:
         if user not in self.user:
             raise ParseError("User does not exist")
             
-        if caller != "admin" and user != caller:
+        if caller != "admin" or user != caller:
             raise SecurityError("Only admins can change other user's password")
         
         self.user[user]["password"] = password
@@ -84,7 +91,7 @@ class Database:
         
     # set is a keyword in python actually
     def set_command(self, caller, var_name, value):
-        if caller != 'admin' and var_name in self.var and var_name not in self.user[caller]['w']:
+        if caller != 'admin' and var_name in self.var and var_name not in self.user[caller]['w'] and var_name not in self.user["anyone"]['w']:
             raise SecurityError("No write permission")
              
         if var_name not in self.local and var_name not in self.var:
@@ -113,7 +120,7 @@ class Database:
         if caller != user_giving_rights and caller != "admin":
             raise SecurityError("Caller must be admin or the user user_giving_rights")
             
-        if target != 'all' and caller == user_giving_rights:
+        if target != 'all' and caller == user_giving_rights and caller != 'admin':
             if target not in self.user[caller]['d']:
                raise SecurityError("user_giving_rights does not have delegation power") 
 
@@ -172,18 +179,15 @@ class Database:
         self.local[new_var] = value
                 
         return '{"status":"LOCAL"}'
-
-    # foreach (element y) in (list x) replacewith <expr>
-    def for_each(self, caller, element, list_name, expr):
+           
+    # check permission of caller on list_name before evaluating expression
+    def check_append_permission(self, caller, list_name):
         if list_name not in self.var and list_name not in self.local:
             raise ParseError("List doesn't exist.")
         
-        if caller != 'admin' and (list_name not in self.user[caller]['w'] or list_name not in self.user[caller]['r']):
-            raise SecurityError("User can't for each.")
-            
-        if element in self.var or element in self.local:
-            raise ParseError("Element already exists.")
-            
+        if caller != 'admin' and list_name in self.var and list_name not in self.user[caller]['w'] and list_name not in self.user[caller]['a'] and list_name not in self.user["anyone"]['w'] and list_name not in self.user["anyone"]['a']:
+            raise SecurityError("User can't append.")
+        
         the_list = None
         
         if list_name in self.var:
@@ -193,16 +197,10 @@ class Database:
             
         if not isinstance(the_list, list):
            raise ParseError("Not a list")
-           
         
-    # parser will call htis function with the value the expr evaluate
+    
+    # parser will call this function with the value the expr evaluate
     def append_command(self, caller, list_name, expr): 
-        if list_name not in self.var and list_name not in self.local:
-            raise ParseError("List doesn't exist.")
-        
-        if caller != 'admin' and list_name not in self.user[caller]['w'] and list_name not in self.user[caller]['a']:
-            raise SecurityError("User can't append.")
-        
         the_list = None
         
         if list_name in self.var:
@@ -227,42 +225,24 @@ class Database:
                 self.local[list_name] = the_list
        
         return '{"status":"APPEND"}'
-
-    # helper function 
-    def get_table(self, var_name):
-        if var_names in self.local:
-            return self.local
-        elif var_names in self.var:
-            return self.var
-        else:
-            return None
-
-    # helper function
-    def get_val(self, var_name):
-        if var_names in self.local:
-            return self.local[var_name]
-        elif var_names in self.var:
-            return self.var[var_name]
-        else:
-            return None
     
     # give value to parser
     def get_identifier_value(self, caller, identifier):
         if identifier not in self.local and identifier not in self.var:
             raise ParseError("Doesn't exist")
-        elif caller != 'admin' and identifier not in self.user[caller]['r']:
+        elif caller != 'admin' and identifier in self.var and identifier not in self.user[caller]['r'] and identifier not in self.user["anyone"]['r']:
             raise SecurityError("Caller cannot read that variable")
         
         if identifier in self.var:
-            return self.var[identifier]
+            return copy.deepcopy(self.var[identifier])
         else:
-            return self.local[identifier]
+            return copy.deepcopy(self.local[identifier])
     
     # give value of x.y to parser        
     def get_record_value(self, caller, record, value):
         if record not in self.local and record not in self.var:
             raise ParseError("Doesn't exist")
-        elif caller != 'admin' and record not in self.user[caller]['r']:
+        elif caller != 'admin' and record in self.var and record not in self.user[caller]['r'] and record not in self.user["anyone"]['r']:
             raise SecurityError("Caller cannot read that variable") 
          
         variable = None 
@@ -278,14 +258,14 @@ class Database:
         if value not in variable:
             raise ParseError("Record does not have the value.")
             
-        return variable[value]
+        return copy.deepcopy(variable[value])
     
     # used to check the specifics of foreach call   
     def check_for_each(self, caller, x, y):
         if x not in self.var and x not in self.local:
             raise ParseError("List doesn't exist.")
         
-        if caller != 'admin' and (x not in self.user[caller]['w'] or x not in self.user[caller]['r']):
+        if caller != 'admin' and x in self.var and (x not in self.user[caller]['w'] or x not in self.user[caller]['r']) and (x not in self.user["anyone"]["w"] or x not in self.user["anyone"]["r"]):
             raise SecurityError("User can't for each.")
             
         if y in self.var or y in self.local:
@@ -299,4 +279,9 @@ class Database:
     
     # helper function, call after everyloop
     def clear_local(self):
-        del(self.local)
+        self.local.clear()
+        
+    def roll_back(self):
+        self.var = self.var_state
+        self.user = self.user_state
+        self.clear_local()

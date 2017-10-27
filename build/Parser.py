@@ -1,4 +1,5 @@
 import re
+import json
 from Error import ParseError
 from Error import SecurityError
 from Database import Database
@@ -13,31 +14,24 @@ token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'd
 
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 
-#TODO: Create function for expect, instead of ugly if-statements.
-#TODO: Need to check that i is still less than len(tokens) even if expect is a success
-#TODO: Actually store the expressions (thinking separate entity for lists, dicts, and variables)
-#TODO: Implement all the little details of the spec. Actually check for FAILEDs and DENIEDs
-#TODO: Test the Parser more rigorously
-#TODO: will strings be passed to isStringFormat already have double quotes removed? I assumed no./ 
-
-def isStringFormat(str):
-    if len(str) > 65535: # max length
+def isStringFormat(value):
+    if len(value) > 65535: # max length
         return False
-    if re.match('^\"[A-Za-z0-9_ ,;\.?!-]*\"$', str) is None: # reasonably tested, could test more
+    if re.match('^\"[A-Za-z0-9_ ,;\.?!-]*\"$', value) is None: # reasonably tested, could test more
         return False
     return True
 
-def isIdentifierFormat(str):
+def isIdentifierFormat(value):
     if str in token_map: # cannot be the same as a key word
         return False
-    if len(str) > 255: # max length
+    if len(value) > 255: # max length
         return False
-    if re.match('^[A-Za-z][A-Za-z0-9_]*$', str) is None: # reasonably tested, could test more
+    if re.match('^[A-Za-z][A-Za-z0-9_]*$', value) is None: # reasonably tested, could test more
         return False
     return True
 
-def isCommentFormat(str):
-    if re.match('[\/][\/][A-Za-z0-9_ ,;\.?!-]*$', str) is None:
+def isCommentFormat(value):
+    if re.match('^//[A-Za-z0-9_ ,;\.?!-]*$', value) is None:
         return False
     return True
 
@@ -131,9 +125,17 @@ def lexer(text):
     for line in text:
         i = 0
         
-        #if 1 < len(line) and line[i + 1] == '/' and line[i] == '/':
-        #    print('hello')
-        #    break
+        if 1 < len(line) and line[i + 1] == '/' and line[i] == '/':
+            continue
+            
+        while i < len(line):
+            if line[i] != ' ':
+                break
+            else:
+                i += 1
+                
+        if (i + 1) < len(line) and line[i + 1] == '/' and line[i] == '/':
+            raise ParseError("Comments on their own line must not be preceded by whitespace.")
         
         lexed.append(['NEWLINE', '\n'])
         # TODO: Split on just spaces, not tabs
@@ -213,6 +215,13 @@ database = Database()
 
 class Parser:
     @staticmethod
+    def set_password(password):
+        if not isStringFormat('"' + password + '"'):
+            raise ParseError
+        else:
+            database.set_admin_password(password)
+            
+    @staticmethod
     def parse(command):
         status_list = []
         
@@ -248,46 +257,27 @@ class Parser:
         i = 6
         while i < len(tokens):
             if not expect(i, tokens, 'NEWLINE'):
+                database.roll_back()
                 return ['{"status":"FAILED"}']
 
             i += 1
-            # 'exit \n' command
-            # TODO: exit security
-            if expect(i, tokens, 'EXIT'):
-                status_list.append('{"status":"EXITING"}')
-                i += 1
-
-            # 'return <expr> \n' command
-            elif expect(i, tokens, 'RETURN'):
-                i += 1
-                
-                try:
-                    status, i, value = getExpr(i, tokens, user)
-
-                    if not status:
-                        return ['{"status":"FAILED"}']
-                except ParseError:
-                    return ['{"status":"FAILED"}']
-                except SecurityError:
-                    return ['{"status":"DENIED"}']
-
-                status_list.append('{"status":"RETURNING","output":"' + str(value) + '"}')
-                i += 1
-
             # 'create principal p s'
-            elif expect(i, tokens, 'CREATE'):
+            if expect(i, tokens, 'CREATE'):
                 i += 1
                 if not expect(i, tokens, 'PRINCIPAL'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 
                 p = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'STRING'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 s = tokens[i][1]
@@ -295,8 +285,10 @@ class Parser:
                 try:
                     message = database.create_principal(user, p, s)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']
                 
                 status_list.append(message)
@@ -306,16 +298,19 @@ class Parser:
             elif expect(i, tokens, 'CHANGE'):
                 i += 1
                 if not expect(i, tokens, 'PASSWORD'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 
                 p = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'STRING'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 s = tokens[i][1]
@@ -323,8 +318,10 @@ class Parser:
                 try:
                     message = database.change_password(user, p, s)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']
                 
                 status_list.append(message)
@@ -334,30 +331,38 @@ class Parser:
             elif expect(i, tokens, 'APPEND'):
                 i += 1
                 if not expect(i, tokens, 'TO'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 x = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'WITH'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 
                 try:
+                    database.check_append_permission(user, x)
+                    
                     status, i, value = getExpr(i, tokens, user)
                 
                     if not status:
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                     
                     message = database.append_command(user, x, value)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']                
 
                 status_list.append(message)
@@ -367,12 +372,14 @@ class Parser:
             elif expect(i, tokens, 'LOCAL'):
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 
                 x = tokens[i][1]
                 
                 i += 1
                 if not expect(i, tokens, 'EQUALS'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
@@ -380,13 +387,16 @@ class Parser:
                     status, i, value = getExpr(i, tokens, user)
                     
                     if not status:
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
+                        
+                    message = database.set_local(x, value)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']
-                     
-                message = database.set_local(x, value)
 
                 status_list.append(message)
                 i += 1
@@ -395,22 +405,26 @@ class Parser:
             elif expect(i, tokens, 'FOR'):
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 y = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'IN'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 x = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'REPLACE'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 i += 1
@@ -420,21 +434,30 @@ class Parser:
                     the_list = database.get_identifier_value(user, x)
                     
                     if not isinstance(the_list, list):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                         
                     for j in range(0,len(the_list)):
                         database.temporary_set(user, y, the_list[j])
                         status, end_expr, value = getExpr(i, tokens, user)
                         if not status:
+                            database.roll_back()
                             return ['{"status":"FAILED"}']
+                            
+                        if isinstance(value, list):
+                            database.roll_back()
+                            return ['{"status":"FAILED"}']
+                            
                         the_list[j] = value
                         
                     database.set_command(user, x, the_list)    
                         
                     database.temporary_remove(user, y)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']               
 
                 i = end_expr
@@ -447,28 +470,34 @@ class Parser:
                 if expect(i, tokens, 'DELEGATION'):
                     i += 1
                     if not expect(i, tokens, 'IDENTIFIER'):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                         
                     target = tokens[i][1]
 
                     i += 1
                     if not expect(i, tokens, 'IDENTIFIER'):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                     
                     q = tokens[i][1]
                     
                     i += 1
-                    if not expect(i, tokens, 'RIGHT') or not expect(i, tokens, 'APPEND'):
+                    if not expect(i, tokens, 'RIGHT') and not expect(i, tokens, 'APPEND'):
+                        database.roll_back()
+                        print("T")
                         return ['{"status":"FAILED"}']
                         
                     right = tokens[i][1]    
 
                     i += 1
                     if not expect(i, tokens, 'ARROW'):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
 
                     i += 1
                     if not expect(i, tokens, 'IDENTIFIER'):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
 
                     p = tokens[i][1]
@@ -476,8 +505,10 @@ class Parser:
                     try:
                         message = database.set_delegation(user, q, right[0], target, p)
                     except ParseError:
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                     except SecurityError:
+                        database.roll_back()
                         return ['{"status":"DENIED"}']
                         
                     status_list.append(message)
@@ -488,6 +519,7 @@ class Parser:
                     
                     i += 1
                     if not expect(i, tokens, 'EQUALS'):
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
 
                     i += 1
@@ -495,44 +527,54 @@ class Parser:
                         status, i, value = getExpr(i, tokens, user)
 
                         if not status:
+                            database.roll_back()
                             return ['{"status":"FAILED"}']
                         
                         message = database.set_command(user, x, value)
                     except ParseError:
+                        database.roll_back()
                         return ['{"status":"FAILED"}']
                     except SecurityError:
+                        database.roll_back()
                         return ['{"status":"DENIED"}']                            
 
                     status_list.append(message)
                     i += 1
 
                 else:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
             # 'delete delegation <tgt> q <right> -> p'
             elif expect(i, tokens, 'DELETE'):
                 i += 1
                 if not expect(i, tokens, 'DELEGATION'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
-                if not expect(i, tokens, 'RIGHT') or not expect(i, tokens, 'APPEND'):
+                if not expect(i, tokens, 'RIGHT') and not expect(i, tokens, 'APPEND'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'ARROW'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 status_list.append('{"status":"DELETE_DELEGATION"}')
@@ -542,14 +584,17 @@ class Parser:
             elif expect(i, tokens, 'DEFAULT'):
                 i += 1
                 if not expect(i, tokens, 'DELEGATOR'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'EQUALS'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                     
                 p = tokens[i][1]
@@ -557,19 +602,75 @@ class Parser:
                 try:
                     message = database.default_delegator(user, p)
                 except ParseError:
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
                 except SecurityError:
+                    database.roll_back()
                     return ['{"status":"DENIED"}']
 
                 status_list.append(message)
                 i += 1
-
-            elif i < len(tokens) and tokens[i][0] == 'END':
+            
+            # 'exit \n' command
+            # TODO: exit security
+            elif expect(i, tokens, 'EXIT'):
                 i += 1
+                
+                if not expect(i, tokens, 'NEWLINE'):
+                    return ['{"status":"FAILED"}']                     
+                
+                i += 1    
+                if not expect(i, tokens, 'END'):
+                    return ['{"status":"FAILED"}']       
+                
+                i += 1
+                
                 if i != len(tokens):
+                    database.roll_back()
                     return ['{"status":"FAILED"}']
+                
+                if user != "admin":
+                    return ['{"status":"DENIED"}']
+                
+                status_list.append('{"status":"EXITING"}')
+
+            # 'return <expr> \n' command
+            elif expect(i, tokens, 'RETURN'):
+                i += 1
+                
+                try:
+                    status, i, value = getExpr(i, tokens, user)
+
+                    if not status:
+                        database.roll_back()
+                        return ['{"status":"FAILED"}']
+                except ParseError:
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                except SecurityError:
+                    database.roll_back()
+                    return ['{"status":"DENIED"}']
+                i += 1    
+                if not expect(i, tokens, 'NEWLINE'):
+                    return ['{"status":"FAILED"}']                     
+                
+                i += 1    
+                if not expect(i, tokens, 'END'):
+                    return ['{"status":"FAILED"}']       
+                
+                i += 1
+                
+                if i != len(tokens):
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                if isinstance(value, str):
+                    status_list.append('{"status":"RETURNING","output":"' + str(value) + '"}')
+                else:
+                    status_list.append('{"status":"RETURNING","output":"' + json.dumps(value) + '"}')
 
             else:
+                database.roll_back()
                 return ['{"status":"FAILED"}']
-
+        
+        database.clear_local()
         return status_list
