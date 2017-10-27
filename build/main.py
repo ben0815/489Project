@@ -15,7 +15,7 @@ def main():
     password = "admin"
     if len(sys.argv) is 3:
        password = sys.argv[2]
-       
+
     if len(password) > 4096:
         sys.exit(255)
 
