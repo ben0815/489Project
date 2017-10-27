@@ -10,7 +10,7 @@ token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'd
       'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
       'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
       'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
-      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL'}
+      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL', 'delegator' : 'DELEGATOR'}
 
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
 
@@ -52,6 +52,8 @@ def getValue(i, tokens, user):
             # x.y
             if expect(i, tokens, 'IDENTIFIER'):
                 y = tokens[i][1]
+                if not expect((i + 1), tokens, 'NEWLINE'):
+                    i += 1
                 return True, i, database.get_record_value(user, x, y)
             else:
                 return False, i, None
@@ -87,7 +89,7 @@ def getFieldVals(i, tokens, user):
         
         if expect(i, tokens, 'STRING'):
             i += 1
-        
+                
         if not status:
             return False, i, None
         
@@ -317,10 +319,12 @@ class Parser:
                 
                 try:
                     message = database.change_password(user, p, s)
-                except ParseError:
+                except ParseError as e:
+                    print(str(e))
                     database.roll_back()
                     return ['{"status":"FAILED"}']
-                except SecurityError:
+                except SecurityError as e:
+                    print(str(e))
                     database.roll_back()
                     return ['{"status":"DENIED"}']
                 
@@ -356,12 +360,14 @@ class Parser:
                     if not status:
                         database.roll_back()
                         return ['{"status":"FAILED"}']
-                    
+                        
                     message = database.append_command(user, x, value)
-                except ParseError:
+                except ParseError as e:
+                    print(str(e))
                     database.roll_back()
                     return ['{"status":"FAILED"}']
-                except SecurityError:
+                except SecurityError as e:
+                    print(str(e))
                     database.roll_back()
                     return ['{"status":"DENIED"}']                
 
@@ -504,10 +510,12 @@ class Parser:
                     
                     try:
                         message = database.set_delegation(user, q, right[0], target, p)
-                    except ParseError:
+                    except ParseError as e:
+                        print(str(e))
                         database.roll_back()
                         return ['{"status":"FAILED"}']
-                    except SecurityError:
+                    except SecurityError as e:
+                        print(str(e))
                         database.roll_back()
                         return ['{"status":"DENIED"}']
                         
@@ -528,13 +536,16 @@ class Parser:
 
                         if not status:
                             database.roll_back()
+                            print("TEST")
                             return ['{"status":"FAILED"}']
                         
                         message = database.set_command(user, x, value)
-                    except ParseError:
+                    except ParseError as e:
+                        print(str(e))
                         database.roll_back()
                         return ['{"status":"FAILED"}']
-                    except SecurityError:
+                    except SecurityError as e:
+                        print(str(e))
                         database.roll_back()
                         return ['{"status":"DENIED"}']                            
 
@@ -600,7 +611,7 @@ class Parser:
                 p = tokens[i][1]
                 
                 try:
-                    message = database.default_delegator(user, p)
+                    message = database.set_default_delegator(user, p)
                 except ParseError:
                     database.roll_back()
                     return ['{"status":"FAILED"}']

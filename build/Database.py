@@ -34,19 +34,20 @@ class Database:
         # at rollback just set user, var to their initial states
         self.user_state = {}
         self.var_state = {}
+        self.delegator_state = "anyone"
         
         self.default_delegator = "anyone"
         
     def set_admin_password(self, password):
         self.user['admin']['password'] = password
 
-    def default_delegator(self, caller, user):
-        if user not in self.user:
+    def set_default_delegator(self, caller, name):
+        if name not in self.user:
             raise ParseError("User to be set as default delegator does not exist.")
         if caller != "admin":
             raise SecurityError("To create a principal you must be admin.")
         
-        self.default_delegator = user
+        self.default_delegator = name
         
         return '{"status":"DEFAULT_DELEGATOR"}'
     
@@ -57,8 +58,9 @@ class Database:
         if password != self.user[caller]['password']:
             raise SecurityError("Invalid password.")
         
-        self.user_state = self.user
-        self.var_state = self.var 
+        self.user_state = copy.deepcopy(self.user)
+        self.var_state = copy.deepcopy(self.var)
+        self.delegator_state = copy.deepcopy(self.default_delegator) 
     
     def create_principal(self, caller, new_user, password):
         if new_user in self.user:
@@ -82,7 +84,7 @@ class Database:
         if user not in self.user:
             raise ParseError("User does not exist")
             
-        if caller != "admin" or user != caller:
+        if caller != "admin" and user != caller:
             raise SecurityError("Only admins can change other user's password")
         
         self.user[user]["password"] = password
@@ -253,7 +255,7 @@ class Database:
             variable = self.local[record]
             
         if not isinstance(variable, dict):
-           raise ParseError("Not a record")
+            raise ParseError("Not a record")
         
         if value not in variable:
             raise ParseError("Record does not have the value.")
@@ -282,6 +284,7 @@ class Database:
         self.local.clear()
         
     def roll_back(self):
-        self.var = self.var_state
-        self.user = self.user_state
+        self.var = copy.deepcopy(self.var_state)
+        self.user = copy.deepcopy(self.user_state)
+        self.default_delegator = copy.deepcopy(self.delegator_state)
         self.clear_local()
