@@ -1,6 +1,7 @@
 import copy
 from Error import ParseError
 from Error import SecurityError
+import collections
 
 # read write append delegate  (rwad)
 # TODO: RETURN STATUS CODES
@@ -254,7 +255,7 @@ class Database:
         else:
             variable = self.local[record]
             
-        if not isinstance(variable, dict):
+        if not isinstance(variable, collections.OrderedDict):
             raise ParseError("Not a record")
         
         if value not in variable:

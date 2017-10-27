@@ -11,7 +11,7 @@ def main():
     if len(sys.argv) > 1:
          port = int(sys.argv[1])
 
-    data =  "as principal admin password \"admin\" do\nreturn newvar\n***\n"
+    data =  "as principal admin password \"admin\" do\nset x = { f=\"alice\", g=\"bob\" }\nset y = \"another string\"\nset z = { f=x.f, g=y, h=x.g, i=\"constant\" }\nreturn z\n***\n"
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

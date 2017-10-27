@@ -3,6 +3,7 @@ import json
 from Error import ParseError
 from Error import SecurityError
 from Database import Database
+import collections
 
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
       '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
@@ -69,7 +70,7 @@ def getValue(i, tokens, user):
         return False, i, None
 
 def getFieldVals(i, tokens, user):
-    values = {}
+    values = collections.OrderedDict()
     i += 1
     while i < len(tokens):
         if not expect(i, tokens, 'IDENTIFIER'):
@@ -93,7 +94,7 @@ def getFieldVals(i, tokens, user):
         if not status:
             return False, i, None
         
-        if isinstance(temp, list) or isinstance(temp, dict):
+        if isinstance(temp, list) or isinstance(temp, collections.OrderedDict):
             raise ParseError
         
         values[ident] = temp     
