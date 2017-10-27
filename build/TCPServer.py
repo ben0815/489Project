@@ -109,14 +109,23 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         print('Received program:', self.program)
 
+        status_list = []
+
         # Once a complete program is received we can send it to the parser.
         status_list = Parser.parse(self.program)
 
         # Convert status list to appropriate response.
         response = ''
 
+        exit = False
         for status in status_list:
+            if status == '{"status":"EXITING"}':
+                exit = True
+
             response += status + '\n'
 
         # Send backt to client.
         self.request.sendall(response.encode('utf-8'))
+
+        if exit:
+            exit(0)
