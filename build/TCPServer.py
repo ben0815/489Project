@@ -43,8 +43,6 @@ class TCPServer:
 
         print('Server started on port', self.port)
 
-        # INPUT PARSER
-        print(Parser.parse('as principal admin password "admin" do\nset records = "test"\nappend to records with { name = "mike", date = "1-1-90" }\nappend to records with { name = "dave", date = "1-1-85" }\nlocal names = records\nforeach rec in names replacewith rec.name\nreturn names\n***'))
         self.server.serve_forever()
 
     # Handle SIGTERM signals gracefully. For our purposes the server should
