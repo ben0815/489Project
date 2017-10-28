@@ -12,5 +12,5 @@ class ParseError(Exception):
 class SecurityError(Exception):
 	pass
 
-class Timeout(Excception):
+class Timeout(Exception):
 	pass
