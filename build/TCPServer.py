@@ -96,11 +96,11 @@ class TCPHandler(socketserver.BaseRequestHandler):
                 print('Data may have not been encoded', file=sys.stderr)
                 continue
 
-            print(data)
-
             # Contatenate data to overall program until '***' is received.
             self.program += data
-            if data.strip() == '***':
+            sep = list(filter(None, data.split('\n')))
+
+            if sep[-1].strip() == '***':
                 break
 
         signal.alarm(0)
