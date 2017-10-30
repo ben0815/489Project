@@ -105,7 +105,7 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         signal.alarm(0)
 
-        print('Received program:', self.program)
+        print('Received program:\n', self.program)
 
         status_list = []
 

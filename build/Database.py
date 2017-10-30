@@ -74,10 +74,16 @@ class Database:
         
         self.user[new_user]["password"] = password
         
-        self.user[new_user]["r"] = copy.deepcopy(self.user[self.default_delegator]['r'])
-        self.user[new_user]["w"] = copy.deepcopy(self.user[self.default_delegator]['w'])
-        self.user[new_user]["a"] = copy.deepcopy(self.user[self.default_delegator]['a'])
-        self.user[new_user]["d"] = copy.deepcopy(self.user[self.default_delegator]['d'])
+        self.user[new_user]["r"] = set()
+        self.user[new_user]["w"] = set()
+        self.user[new_user]["a"] = set()
+        self.user[new_user]["d"] = set()
+        
+        for delegate in self.user[self.default_delegator]['d']:
+            self.user[new_user]["r"].add(delegate)
+            self.user[new_user]["w"].add(delegate)
+            self.user[new_user]["a"].add(delegate)
+            self.user[new_user]["d"].add(delegate)   
             
         return '{"status":"CREATE_PRINCIPAL"}'
         

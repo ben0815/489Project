@@ -19,7 +19,7 @@ def main():
 	
     #data = "as principal admin password \"admin\" do               \n default delegator = alice     \n return \"success\"\n    ***"
     #data = "as principal admin password \"admin\" do\n create principal billy \"billy\"\n return \"success\"\n***"
-    data = "as principal billy password \"billy\" do\n return x\n ***        \n"	
+    data = "as principal admin password \"admin\" do\nset records = []\nappend to records with { name = \"mike\", date = \"1-1-90\" }\nappend to records with { name = \"dave\", date = \"1-1-85\" }\nappend to records with { date = \"1-1-85\" }\nforeach rec in records replacewith rec.date\nforeach rec in records replacewith { a=\"hum\",b=rec }\nset rec = \"\"\nreturn records\n***\n"
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
