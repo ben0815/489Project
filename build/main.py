@@ -10,7 +10,6 @@ def main():
        sys.exit(255)
 
     # Get port and password from command line arguments.
-    print(sys.argv[1])
     port = sys.argv[1]
 
     # Check for leading and trailing whitespace.
