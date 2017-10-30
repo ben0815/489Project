@@ -214,6 +214,22 @@ def lexer(text):
                 word = ""
     return lexed
     
+def checkFormat(tokens):
+    i = len(tokens) - 2
+    if not expect(i, tokens, 'NEWLINE'):
+        raise ParseError
+    i -= 1
+    while i > -1:
+        if expect(i, tokens, 'NEWLINE'):
+            i += 1
+            if expect(i, tokens, 'RETURN') or expect(i, tokens, 'EXIT'):
+                return
+            else:
+                raise ParseError
+        i -= 1
+       
+    raise ParseError
+    
 database = Database() 
 
 class Parser:
@@ -254,6 +270,12 @@ class Parser:
 
         # Check that the last line is '***'
         if tokens[len(tokens) - 1 ][0] != 'END':
+            return ['{"status":"FAILED"}']
+            
+        # Check that second to last command is return or exit
+        try:
+            checkFormat(tokens)
+        except ParseError:
             return ['{"status":"FAILED"}']
 
         # Now execute the commands
