@@ -10,7 +10,7 @@ def main():
        sys.exit(255)
 
     #Get port and password from command line arguments.
-    port = sys.argv[1]
+    port = sys.argv[1].strip()
 
     password = "admin"
     if len(sys.argv) is 3:
