@@ -9,8 +9,16 @@ def main():
        print("Usage: ./server <port> [<password>]", file=sys.stderr)
        sys.exit(255)
 
-    #Get port and password from command line arguments.
-    port = sys.argv[1].strip()
+    # Get port and password from command line arguments.
+    print(sys.argv[1])
+    port = sys.argv[1]
+
+    # Check for leading and trailing whitespace.
+    if len(port) - len(port.lstrip()) > 0:
+        sys.exit(255)
+    elif len(port) - len(port.rstrip()) > 0:
+        sys.exit(255)
+
 
     password = "admin"
     if len(sys.argv) is 3:
@@ -19,7 +27,7 @@ def main():
     if len(password) > 4096:
         sys.exit(255)
 
-    #Startup the server.
+    # Startup the server.
     server = TCPServer(port, password)
 
     server.start()
