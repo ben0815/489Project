@@ -678,7 +678,7 @@ class Parser:
                 if isinstance(value, str):
                     status_list.append('{"status":"RETURNING","output":"' + str(value) + '"}')
                 else:
-                    status_list.append('{"status":"RETURNING","output":"' + json.dumps(value) + '"}')
+                    status_list.append('{"status":"RETURNING","output":' + json.dumps(value) + '}')
 
             else:
                 database.roll_back()
