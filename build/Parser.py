@@ -16,8 +16,7 @@ token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'd
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',', '(', ')']
 
 def isStringFormat(value):
-    if (len(value) - 2) > 65535: # max length
-        print("TEST")
+    if len(value) > 65535: # max length
         return False
     if re.match('^\"[A-Za-z0-9_ ,;\.?!-]*\"$', value) is None: # reasonably tested, could test more
         return False
