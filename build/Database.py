@@ -206,6 +206,10 @@ class Database:
             
         if not isinstance(the_list, list):
            raise ParseError("Not a list")
+           
+    def check_let(self, caller, variable):
+        if variable in self.var or variable in self.local:
+            raise ParseError("Variable already exists.")
         
     
     # parser will call this function with the value the expr evaluate

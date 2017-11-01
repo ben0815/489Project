@@ -6,14 +6,14 @@ from Database import Database
 import collections
 
 token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'do' : 'DO',
-      '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LPAR', '}' : 'RPAR',
+      '***' : 'END', 'exit' : 'EXIT', 'return' : 'RETURN', '{' : 'LBRACE', '}' : 'RBRACE',
       '[' : 'LBRACK', ']' : 'RBRACK', 'create' : 'CREATE', 'change' : 'CHANGE', 'password' :
       'PASSWORD', 'set' : 'SET', 'append' : 'APPEND', 'to' : 'TO', 'with' : 'WITH', '=' :
       'EQUALS', '.' : 'DOT', ',' : 'COMMA', '->' : 'ARROW', 'local' : 'LOCAL', 'foreach' :
       'FOR', 'in' : 'IN', 'replacewith' : 'REPLACE', 'delegation' : 'DELEGATION', 'delete' :
-      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL', 'delegator' : 'DELEGATOR'}
+      'DELETE', 'default' : 'DEFAULT', 'read' : 'RIGHT', 'write' : 'RIGHT', 'delegate' : 'RIGHT', 'all' : 'ALL', 'delegator' : 'DELEGATOR', 'split' : 'SPLIT', 'concat' : 'CONCAT', 'tolower' : 'TOLOWER', '(' : 'LPAR', ')' : 'RPAR', 'equal' : 'EQUAL', 'notequal' : 'NOTEQUAL', 'filtereach' : 'FILTER', 'let' : 'LET'}
 
-punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',']
+punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',', '(', ')']
 
 def isStringFormat(value):
     if len(value) > 65535: # max length
@@ -53,13 +53,9 @@ def getValue(i, tokens, user):
             # x.y
             if expect(i, tokens, 'IDENTIFIER'):
                 y = tokens[i][1]
-                if not expect((i + 1), tokens, 'NEWLINE'):
-                    i += 1
                 return True, i, database.get_record_value(user, x, y)
             else:
                 return False, i, None
-        elif expect(i, tokens, 'RPAR') or expect(i, tokens, 'COMMA'):
-            return True, i, database.get_identifier_value(user, x)
         else:
             return True, (i - 1), database.get_identifier_value(user, x)
     # s
@@ -72,7 +68,7 @@ def getValue(i, tokens, user):
 def getFieldVals(i, tokens, user):
     values = collections.OrderedDict()
     i += 1
-    while i < len(tokens):
+    while i < len(tokens):        
         if not expect(i, tokens, 'IDENTIFIER'):
             return False, i, None
         
@@ -88,8 +84,7 @@ def getFieldVals(i, tokens, user):
         i += 1
         status, i, temp = getValue(i, tokens, user)
         
-        if expect(i, tokens, 'STRING'):
-            i += 1
+        i += 1
                 
         if not status:
             return False, i, None
@@ -98,8 +93,9 @@ def getFieldVals(i, tokens, user):
             raise ParseError
         
         values[ident] = temp     
-
-        if expect(i, tokens, 'RPAR'):
+        
+        
+        if expect(i, tokens, 'RBRACE'):
             return True, i, values
         elif not expect(i, tokens, 'COMMA'):
             return False, i, None
@@ -107,6 +103,311 @@ def getFieldVals(i, tokens, user):
             i += 1
     
     return False, i, None
+    
+def getSplit(i, tokens, user):
+    i += 1
+    if not expect(i, tokens, 'LPAR'):
+        raise ParseError
+    
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+    
+    first_value_i = i
+    
+    try:
+        status, i, first_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+    
+    i += 1
+    if not expect(i, tokens, 'COMMA'):
+        raise ParseError
+        
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+        
+    second_value_i = i    
+        
+    try:
+        status, i, second_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+
+    i += 1
+    if not expect(i, tokens, 'RPAR'):
+        raise ParseError 
+    
+    status, i, first_value = getValue(first_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(first_value, str):
+        raise ParseError
+    
+    status, i, second_value = getValue(second_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(second_value, str):
+        raise ParseError
+    
+    length = len(second_value)
+    
+    record = collections.OrderedDict()
+    
+    if length > len(first_value):
+        record["fst"] = first_value
+        record["snd"] = ''
+    else:
+        record["fst"] = first_value[:length]
+        record["snd"] = first_value[length:]
+    
+    return True, (i + 1), record 
+    
+def getConcat(i, tokens, user):
+    i += 1
+    if not expect(i, tokens, 'LPAR'):
+        raise ParseError
+    
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+    
+    first_value_i = i
+    
+    try:
+        status, i, first_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+    
+    i += 1
+    if not expect(i, tokens, 'COMMA'):
+        raise ParseError
+        
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+        
+    second_value_i = i    
+        
+    try:
+        status, i, second_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+
+    i += 1
+    if not expect(i, tokens, 'RPAR'):
+        raise ParseError 
+    
+    status, i, first_value = getValue(first_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(first_value, str):
+        raise ParseError
+    
+    status, i, second_value = getValue(second_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(second_value, str):
+        raise ParseError
+        
+    new_string = first_value + second_value
+    
+    if len(new_string) > 65535:
+        new_string = new_string[:65535]
+    
+    return True, (i + 1), new_string
+
+def getToLower(i, tokens, user):
+    i += 1
+    if not expect(i, tokens, 'LPAR'):
+        raise ParseError
+    
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+    
+    first_value_i = i
+    
+    try:
+        status, i, first_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+        
+    i += 1
+    if not expect(i, tokens, 'RPAR'):
+        raise ParseError
+        
+    status, i, first_value = getValue(first_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(first_value, str):
+        raise ParseError
+    
+    first_value = first_value.lower()
+    
+    return True, (i + 1), first_value   
+
+def getEqual(i, tokens, user):
+    i += 1
+    if not expect(i, tokens, 'LPAR'):
+        raise ParseError
+    
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+    
+    first_value_i = i
+    
+    try:
+        status, i, first_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+    
+    i += 1
+    if not expect(i, tokens, 'COMMA'):
+        raise ParseError
+        
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+        
+    second_value_i = i    
+        
+    try:
+        status, i, second_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+
+    i += 1
+    if not expect(i, tokens, 'RPAR'):
+        raise ParseError 
+    
+    status, i, first_value = getValue(first_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(first_value, str) and not isinstance(first_value, collections.OrderedDict):
+        raise ParseError
+    
+    status, i, second_value = getValue(second_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(second_value, str) and not isinstance(second_value, collections.OrderedDict):
+        raise ParseError
+        
+    if second_value == first_value:
+        return True, (i + 1), ""
+    else:
+        return True, (i + 1), "0"
+        
+def getNotEqual(i, tokens, user):
+    i += 1
+    if not expect(i, tokens, 'LPAR'):
+        raise ParseError
+    
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+    
+    first_value_i = i
+    
+    try:
+        status, i, first_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+    
+    i += 1
+    if not expect(i, tokens, 'COMMA'):
+        raise ParseError
+        
+    i += 1
+    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'STRING'):
+        raise ParseError
+        
+    second_value_i = i    
+        
+    try:
+        status, i, second_value = getValue(i, tokens, user) 
+    except SecurityError:
+        pass
+
+    i += 1
+    if not expect(i, tokens, 'RPAR'):
+        raise ParseError 
+    
+    status, i, first_value = getValue(first_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(first_value, str) and not isinstance(first_value, collections.OrderedDict):
+        raise ParseError
+    
+    status, i, second_value = getValue(second_value_i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    if not isinstance(second_value, str) and not isinstance(second_value, collections.OrderedDict):
+        raise ParseError
+        
+    if second_value != first_value:
+        return True, (i + 1), ""
+    else:
+        return True, (i + 1), "0"      
+
+def getLet(i, tokens, user):
+    i += 1
+    
+    if not expect(i, tokens, 'IDENTIFIER'):
+        return ParseError
+    
+    x = tokens[i][1]
+    
+    i += 1
+    
+    if not expect(i, tokens, 'EQUALS'):
+        return ParseError
+    
+    i += 1
+    
+    status, i, value = getExpr(i, tokens, user)
+    
+    if not status:
+        raise ParseError
+    
+    database.temporary_set(user, x, value)
+    
+    i += 1
+    
+    if not expect(i, tokens, 'IN'):
+        raise ParseError
+    
+    i += 1
+    
+    status, i, value = getExpr(i, tokens, user)
+    
+    if not status:
+        raise ParseError
+        
+    database.temporary_remove(user, x)
+        
+    return True, i, value
+    
 
 def getExpr(i, tokens, user):
     if expect(i, tokens, 'LBRACK'):
@@ -116,8 +417,20 @@ def getExpr(i, tokens, user):
         return True, i, []
     elif expect(i, tokens, 'IDENTIFIER') or expect(i, tokens, 'STRING'):
         return getValue(i, tokens, user)
-    elif expect(i, tokens, 'LPAR'):
+    elif expect(i, tokens, 'LBRACE'):
         return getFieldVals(i, tokens, user)
+    elif expect(i, tokens, 'SPLIT'):
+        return getSplit(i, tokens, user)
+    elif expect(i, tokens, 'CONCAT'):
+        return getConcat(i, tokens, user)
+    elif expect(i, tokens, 'TOLOWER'):
+        return getToLower(i, tokens, user)
+    elif expect(i, tokens, 'EQUAL'):
+        return getEqual(i, tokens, user)
+    elif expect(i, tokens, 'NOTEQUAL'):
+        return getNotEqual(i, tokens, user)
+    elif expect(i, tokens, 'LET'):
+        return getLet(i, tokens, user)
     else:
         return False, i, None
 
@@ -492,6 +805,71 @@ class Parser:
                 i = end_expr
                 status_list.append('{"status":"FOREACH"}')
                 i += 1
+                
+            # 'filtereach y in x with <expr>'
+            elif expect(i, tokens, 'FILTER'):
+                i += 1
+                if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                    
+                y = tokens[i][1]
+
+                i += 1
+                if not expect(i, tokens, 'IN'):
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+
+                i += 1
+                if not expect(i, tokens, 'IDENTIFIER'):
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                    
+                x = tokens[i][1]
+
+                i += 1
+                if not expect(i, tokens, 'WITH'):
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                    
+                i += 1
+                
+                try:
+                    database.check_for_each(user, x, y)
+                    the_list = database.get_identifier_value(user, x)
+                    filter_list = []
+                    
+                    if not isinstance(the_list, list):
+                        database.roll_back()
+                        return ['{"status":"FAILED"}']
+                        
+                    for j in range(0,len(the_list)):
+                        database.temporary_set(user, y, the_list[j])
+                        status, end_expr, value = getExpr(i, tokens, user)
+                        if not status:
+                            database.roll_back()
+                            return ['{"status":"FAILED"}']
+                            
+                        if isinstance(value, list):
+                            database.roll_back()
+                            return ['{"status":"FAILED"}']
+                        
+                        if value == "":    
+                            filter_list.append(the_list[j])
+                        
+                    database.set_command(user, x, filter_list)    
+                        
+                    database.temporary_remove(user, y)
+                except ParseError:
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                except SecurityError:
+                    database.roll_back()
+                    return ['{"status":"DENIED"}']               
+
+                i = end_expr
+                status_list.append('{"status":"FILTEREACH"}')
+                i += 1
 
             # 'set delegation <tgt> q <right> -> p' or 'set x = <expr>'
             elif expect(i, tokens, 'SET'):
@@ -559,7 +937,6 @@ class Parser:
 
                         if not status:
                             database.roll_back()
-                            print("TEST")
                             return ['{"status":"FAILED"}']
                         
                         message = database.set_command(user, x, value)

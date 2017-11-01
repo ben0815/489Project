@@ -77,6 +77,8 @@ class TCPHandler(socketserver.BaseRequestHandler):
         except Timeout:
             print('Timeout exceeded (30 seconds). Please resend the program' \
                     ' from the beginning.')
+            response = '{"status":"TIMEOUT"}'
+            self.request.sendall(response.encode('utf-8'))
 
     # Clear program and reset alarm.
     def finish(self):
