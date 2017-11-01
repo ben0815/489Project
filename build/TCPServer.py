@@ -78,6 +78,8 @@ class TCPHandler(socketserver.BaseRequestHandler):
             print('Timeout exceeded (30 seconds). Please resend the program' \
                     ' from the beginning.')
             response = '{"status":"TIMEOUT"}'
+            print("Response sent:")
+            print(response)
             self.request.sendall(response.encode('utf-8'))
 
     # Clear program and reset alarm.
@@ -107,7 +109,14 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
         signal.alarm(0)
 
-        print('Received program:\n', self.program)
+        print('Received program:')
+        print(self.program)
+        
+        if len(self.program) > 1000000:
+            response = '{"status":"FAILED"}'
+            print("Response sent:")
+            print(response)
+            self.request.sendall(response.encode('utf-8'))
 
         status_list = []
 
@@ -125,6 +134,8 @@ class TCPHandler(socketserver.BaseRequestHandler):
             response += status + '\n'
 
         # Send backt to client.
+        print("Response sent:")
+        print(response)
         self.request.sendall(response.encode('utf-8'))
 
         if exit:

@@ -16,7 +16,8 @@ token_map = {'principal' : 'PRINCIPAL', 'as' : 'AS', 'password' : 'PASSWORD', 'd
 punctuation = ['=', '[', ']', '.', '-', '>', '{', '{', ',', '(', ')']
 
 def isStringFormat(value):
-    if len(value) > 65535: # max length
+    # Subtract 2 to account for quotations
+    if len(value) - 2 > 65535: # max length
         return False
     if re.match('^\"[A-Za-z0-9_ ,;\.?!-]*\"$', value) is None: # reasonably tested, could test more
         return False
@@ -32,7 +33,7 @@ def isIdentifierFormat(value):
     return True
 
 def isCommentFormat(value):
-    if re.match('^//[A-Za-z0-9_ ,;\.?!-]*$', value) is None:
+    if re.match('^[/][/][A-Za-z0-9_ ,;\.?!-]*$', value) is None:
         return False
     return True
 
@@ -442,6 +443,8 @@ def lexer(text):
         i = 0
         
         if 1 < len(line) and line[i + 1] == '/' and line[i] == '/':
+            if not isCommentFormat(line):
+                raise ParseError("Bad comment format.")
             continue
             
         while i < len(line):
@@ -463,6 +466,8 @@ def lexer(text):
         while i < len(line):
             if line[i] == '/':
                 if (i + 1) < len(line) and line[i + 1] == '/':
+                    if not isCommentFormat(line[i:]):
+                        raise ParseError("Bad comment format.")
                     break
 
             # Eat whitespace or append a new token
