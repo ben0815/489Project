@@ -117,26 +117,26 @@ class TCPHandler(socketserver.BaseRequestHandler):
             print("Response sent:")
             print(response)
             self.request.sendall(response.encode('utf-8'))
+        else:
+            status_list = []
 
-        status_list = []
+            # Once a complete program is received we can send it to the parser.
+            status_list = Parser.parse(self.program)
 
-        # Once a complete program is received we can send it to the parser.
-        status_list = Parser.parse(self.program)
+            # Convert status list to appropriate response.
+            response = ''
 
-        # Convert status list to appropriate response.
-        response = ''
+            exit = False
+            for status in status_list:
+                if status == '{"status":"EXITING"}':
+                    exit = True
 
-        exit = False
-        for status in status_list:
-            if status == '{"status":"EXITING"}':
-                exit = True
+                response += status + '\n'
 
-            response += status + '\n'
+            # Send backt to client.
+            print("Response sent:")
+            print(response)
+            self.request.sendall(response.encode('utf-8'))
 
-        # Send backt to client.
-        print("Response sent:")
-        print(response)
-        self.request.sendall(response.encode('utf-8'))
-
-        if exit:
-            exit(0)
+            if exit:
+                exit(0)
