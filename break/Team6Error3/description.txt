@@ -1,0 +1,1 @@
+Security Error: This shows a lack of confidentiality; Mike is able to access a variable after delete delegation is called, supposedly removing him of this right. Users without authorization should not be allowed to access data or resources in a secure system. The specification disallows users to access objects once their rights have been removed.

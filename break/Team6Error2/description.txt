@@ -1,0 +1,1 @@
+Security Error: An unauthorized user, Sandra, is able to take away Mike's permissions, despite never being made a delegator. This is a violation of integrity, as users without authorization should not be able to change permissions. The specification disallows users to delete rights for which they are not a delegator.

@@ -1,0 +1,1 @@
+Security Error: In this case, Sandra claims to admin to delete a delegation right, which works. In secure systems, there should be proper authorization, or else the system is open to abuses by users claiming to have rights. The specification disallows users to claim to be a user other than the one they are in this command.

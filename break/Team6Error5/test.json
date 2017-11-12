@@ -1,0 +1,41 @@
+{  
+    "arguments":{  
+        "argv":[  
+            "%PORT%"
+        ]
+    },
+    "programs":[  
+        {  
+            "output":[  
+                {  
+                    "status":"CREATE_PRINCIPAL"
+                },
+                {  
+                    "status":"CREATE_PRINCIPAL"
+                }
+            ],
+            "program":"as principal admin password \"admin\" do\ncreate principal sandra \"sandy\"\ncreate principal mike \"a\"\n***\n"
+        },
+        {  
+            "output":[  
+                {  
+                    "status":"SET"
+                },
+                {  
+                    "status":"DELETE_DELEGATION"
+                },
+                {  
+                    "status":"DELETE_DELEGATION"
+                },
+                {  
+                    "status":"APPEND"
+                },
+                {  
+                    "status":"RETURNING",
+                    "output": [" and an error"]
+                }
+            ],
+            "program":"as principal mike password \"a\" do\nset mikey = []\ndelete delegation mikey mike write -> mike\ndelete delegation mikey mike append -> mike\nappend to mikey with \" and an error\"\nreturn mikey\n***\n"
+        }
+    ]
+}

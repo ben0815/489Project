@@ -1,0 +1,1 @@
+Security Error: In this case, we demonstrate that a user can append even when the rights of write and append are taken away. This violates integrity, as a user without access is able to modify data in the system. This is disallowed by the specification because a user is not supposed to be able to append unless it has read and right permissions.
