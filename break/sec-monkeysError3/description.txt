@@ -1,0 +1,1 @@
+Security Error: In the first program, admin creates a new principal, bob. In the next program, bob creates a local variable x and tries to append a record to this variable x, but is wrongfully DENIED. According to the spec, local variables can be used in all commands as if it were a global variable, so the second program should pass and not be DENIED.

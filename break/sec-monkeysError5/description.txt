@@ -1,0 +1,1 @@
+Security Error: In the first program, admin creates the principal bob and a variable x. Admin delegates append permission to bob on the variable x. In the next program, bob is able to return the value of x, even though bob does not have read permission on x. The second program should return a DENIED status.
