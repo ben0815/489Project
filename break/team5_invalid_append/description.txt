@@ -1,0 +1,1 @@
+A principal can append to a variable x with only read permissions on x.

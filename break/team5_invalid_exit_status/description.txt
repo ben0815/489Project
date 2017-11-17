@@ -1,0 +1,4 @@
+When using the exit command no status code is returned. In lines
+Commands.py:325-331 the exit command is handled. Here you can see that when they
+see the exit command they simply call exit(0) and do not send any status codes
+to the client.

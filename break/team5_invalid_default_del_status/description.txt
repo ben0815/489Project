@@ -1,0 +1,10 @@
+When setting a default delegator if the target does not exist (FAILED) or if the
+principal is not admin (DENIED) no response status
+is returned. In database.py:10-11 they check if the target exists, however when
+they throw the exception the handler in lines server:250-288 does not return any
+status for this exception. It is specifically handled in lines server:276-288.
+Here there are no responses sent back to the client.
+
+The same applies for when the principal is not admin. The error is detected by
+their database, but the status code is not sent to the client. Because they
+fail to handle a security error I have marked this bug as security.

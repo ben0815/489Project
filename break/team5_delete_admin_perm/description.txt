@@ -1,0 +1,7 @@
+A principal can use delete delegation to remove permissions from admin. The
+delete delegation command is handled in their database class in lines
+database.py:396-442. In this function they do not check if rights are being
+deleted from admin.
+
+A principal can only do this if they do not have delegate permissions on the
+target variable.
