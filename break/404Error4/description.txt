@@ -1,0 +1,1 @@
+Security Error: In the first program, admin creates a new principal, bob. In the next program, bob creates a local variable x and tries to assign the value of x to a new variable y in a set command, but is wrongfully denied. Principals are allowed read, write, delegate, and append permissions to any local variables that they create.

@@ -1,33 +1,12 @@
-{  
-    "arguments":{  
-        "argv":[  
-            "%PORT%"
-        ]
+{
+    "type": "security",
+    "target_team": 6,
+    "arguments": {
+        "argv": ["%PORT%"],
+        "base64": false
     },
-    "programs":[  
-        {  
-            "output":[  
-                {  
-                    "status":"CREATE_PRINCIPAL"
-                },
-                {  
-                    "status":"SET"
-                },
-                {  
-                    "status":"RETURNING",
-                    "output":"stringy"
-                }
-            ],
-            "program":"as principal admin password \"admin\" do\ncreate principal sandra \"sandy\"\nset good = \"string\"\nreturn good\n***\n"
-        },
-        {  
-            "output":[  
-                {  
-                    "status":"RETURNING",
-                    "output":"stringy"
-                }
-            ],
-            "program":"as principal sandra password \"sandy\" do\nreturn good\n***\n"
-        }
+    "programs": [
+        {"program": "as principal admin password \"admin\" do\ncreate principal sandra \"sandy\"\nset good = \"string\"\nreturn good\n***\n", "base64": false},
+        {"program": "as principal sandra password \"sandy\" do\nreturn good\n***\n", "base64": false}
     ]
 }

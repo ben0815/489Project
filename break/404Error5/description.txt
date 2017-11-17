@@ -1,0 +1,1 @@
+Security Error: Admin creates two principals, bob and rick. Bob creates a new variable x. Rick tries to delete delegation on x without having delegate power and the server does not return DENIED. According to the spec, if the current principal is the one removing the right, they need to have delegate power.

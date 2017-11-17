@@ -1,0 +1,1 @@
+Security Error: admin creates a new principal, bob. In the next program, bob creates a variable x and then tries to return x, but they are wrongly denied. The set command gives the principal read, write, delegate, and append permissions on the variable they set. Thus, bob should be able to return x.
