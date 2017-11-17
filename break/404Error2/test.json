@@ -6,8 +6,7 @@
         "base64": false
     },
     "programs": [
-        {"program": "as principal admin password \"admin\" do\ncreate principal bob \"bob\"\ncreate principal rick \"rick\"\nset x = \"value\"\nset delegation x admin delegate -> bob\nreturn \"okay\"\n***\n", "base64": false},
-        {"program": "as principal bob password \"bob\" do\nset delegation x bob read -> rick\nreturn \"okay\"\n***\n", "base64": false},
-        {"program": "as principal rick password \"rick\" do\nreturn x\n***\n", "base64": false}
+        {"program": "as principal admin password \"admin\" do\nset x = []\nset delegation x admin write -> anyone\ncreate principal bob \"bob\"\nreturn \"okay\"\n***\n", "base64": false},
+        {"program": "as principal bob password \"bob\" do\nappend to x with \"value\"\nreturn \"success\"\n***\n", "base64": false}
     ]
 }

@@ -7,6 +7,6 @@
     },
     "programs": [
         {"program": "as principal admin password \"admin\" do\ncreate principal bob \"bob\"\nreturn \"okay\"\n***\n", "base64": false},
-        {"program": "as principal bob password \"bob\" do\nlocal x = []\nappend to x with { name = \"mike\", date = \"1-1-90\" }\nreturn \"okay\"\n***\n", "base64": false}
+        {"program": "as principal bob password \"bob\" do\nlocal x = []\nappend to x with { name = \"mike\", date = \"1-1-90\" }\nreturn x\n***\n", "base64": false}
     ]
 }
