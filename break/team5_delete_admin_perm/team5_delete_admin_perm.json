@@ -1,0 +1,12 @@
+{
+  "type": "security",
+  "target_team": 5,
+  "arguments": {
+    "argv": ["%PORT%"],
+    "base64": false
+  },
+  "programs": [
+    {"program": "as principal admin password \"admin\" do\ncreate principal bob \"bobpass\"\nset x = \"my_string\"\nreturn x\n***\n", "base64": false},
+    {"program": "as principal bob password \"bobpass\" do\ndelete delegation x bob read -> admin\nreturn []\n***\n", "base64": false}
+  ]
+}

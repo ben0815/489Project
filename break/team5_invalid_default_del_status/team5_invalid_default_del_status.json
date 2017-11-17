@@ -1,0 +1,13 @@
+{
+  "type": "security",
+  "target_team": 5,
+  "arguments": {
+    "argv": ["%PORT%"],
+    "base64": false
+  },
+  "programs": [
+    {"program": "as principal admin password \"admin\" do\ncreate principal bob \"bobpass\"\ncreate principal alice \"alicepass\"\nreturn []\n***\n", "base64": false},
+    {"program": "as principal bob password \"bobpass\" do\ndefault delegator = alice\nreturn []\n***\n"},
+    {"program": "as principal adminpassword \"bobpass\" do\ndefault delegator = joe\nexit\n***\n", "base64": false}
+  ]
+}

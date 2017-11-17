@@ -1,0 +1,7 @@
+If a newline character is not provided at the very end of the program (i.e.
+'***\n') then the program will hang and timeout. The build it spec indicates
+that there should not be a newline character after '***'. This can be seen in
+the Grammar section.
+
+It looks like they make the assumption that a newline character should appear at
+the end in their code at Interpreter.py:298-305.
