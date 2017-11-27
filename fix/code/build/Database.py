@@ -130,6 +130,16 @@ class Database:
             self.var[var_name] = value
     
         return '{"status":"SET"}'
+
+    def get_delegations(self, user):
+        valid = []
+
+        for item in self.security_stack:
+            if user == item[3] and 'd' == item[2]:
+                if self.check_permission('d', user, item[0]):
+                    valid.append(item[0])
+
+        return valid
         
     def set_delegation(self, caller, user_giving_rights, right, target, user_getting_rights):
         if user_getting_rights not in self.user or user_giving_rights not in self.user:
@@ -144,7 +154,7 @@ class Database:
             raise SecurityError("Caller must be admin or the user user_giving_rights")
             
         if target != 'all' and caller == user_giving_rights and caller != 'admin':
-            if target not in self.user[caller]['d']:
+            if not self.check_permission('d',caller,target):
                raise SecurityError("user_giving_rights does not have delegation power") 
 
         if target == "all" and user_getting_rights != "admin":
@@ -154,7 +164,7 @@ class Database:
                     stack = [item, user_giving_rights, right, user_getting_rights]
                     self.security_stack.append(stack)
             else:
-                for item in self.user[user_giving_rights]['d']:
+                for item in self.get_delegations(user_giving_rights):
                     # Add this set delegation to the security stack
                     stack = [item, user_giving_rights, right, user_getting_rights]
                     self.security_stack.append(stack)
@@ -191,7 +201,7 @@ class Database:
             raise SecurityError("Caller must be admin or user losing or taking rights")
             
         if caller == user_taking_rights and target != 'all' and caller != "admin":
-            if target not in self.user[caller]['d']:
+            if not self.check_permission('d',caller,target):
                raise SecurityError("user_taking_rights does not have delegation power")
         
         if target == "all" and user_losing_rights != "admin":
@@ -201,7 +211,7 @@ class Database:
                     if index > -1:
                         del self.security_stack[index]
             else:
-                for item in self.user[user_taking_rights]['d']:
+                for item in self.get_delegations(user_giving_rights):
                     index = self.get_in_security_stack(item, user_taking_rights, right, user_losing_rights)
                     if index > -1:
                         del self.security_stack[index]
