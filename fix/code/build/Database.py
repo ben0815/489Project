@@ -134,8 +134,12 @@ class Database:
                raise SecurityError("user_giving_rights does not have delegation power") 
 
         if target == "all":
-            for item in self.user[user_giving_rights]['d']:
-                self.user[user_getting_rights][right].add(item) # should I check to see if right is rwad,or is this already done?
+            if caller == "admin":
+                for item in self.var:
+                    self.user[user_getting_rights][right].add(item)
+            else:
+                for item in self.user[user_giving_rights]['d']:
+                    self.user[user_getting_rights][right].add(item) # should I check to see if right is rwad,or is this already done?
 
         else: # set a specific right
             self.user[user_getting_rights][right].add(target)
