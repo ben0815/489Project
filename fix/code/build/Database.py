@@ -142,7 +142,8 @@ class Database:
                     self.user[user_getting_rights][right].add(item) # should I check to see if right is rwad,or is this already done?
 
         else: # set a specific right
-            self.user[user_getting_rights][right].add(target)
+            if user_getting_rights != 'admin':
+                self.user[user_getting_rights][right].add(target)
         
         return '{"status":"SET_DELEGATION"}'
 
@@ -169,7 +170,8 @@ class Database:
                 self.user[user_losing_rights][right].discard(item)
 
         else:
-            self.user[user_losing_rights][right].discard(target)    
+            if user_losing_rights != 'admin':
+                self.user[user_losing_rights][right].discard(target)    
         
         
         # all users or single user
