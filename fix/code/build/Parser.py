@@ -881,7 +881,7 @@ class Parser:
                 i += 1
                 if expect(i, tokens, 'DELEGATION'):
                     i += 1
-                    if not expect(i, tokens, 'IDENTIFIER'):
+                    if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'ALL'):
                         database.roll_back()
                         return ['{"status":"FAILED"}']
                         
