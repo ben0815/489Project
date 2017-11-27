@@ -969,19 +969,25 @@ class Parser:
                     return ['{"status":"FAILED"}']
 
                 i += 1
-                if not expect(i, tokens, 'IDENTIFIER'):
+                if not expect(i, tokens, 'IDENTIFIER') and not expect(i, tokens, 'ALL'):
                     database.roll_back()
                     return ['{"status":"FAILED"}']
+
+                target = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'IDENTIFIER'):
                     database.roll_back()
                     return ['{"status":"FAILED"}']
+
+                q = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'RIGHT') and not expect(i, tokens, 'APPEND'):
                     database.roll_back()
                     return ['{"status":"FAILED"}']
+
+                right = tokens[i][1]
 
                 i += 1
                 if not expect(i, tokens, 'ARROW'):
@@ -993,7 +999,20 @@ class Parser:
                     database.roll_back()
                     return ['{"status":"FAILED"}']
 
-                status_list.append('{"status":"DELETE_DELEGATION"}')
+                p = tokens[i][1]
+
+                try:
+                    message = database.delete_delegation(user, q, right[0], target, p)
+                except ParseError as e:
+                    print(str(e))
+                    database.roll_back()
+                    return ['{"status":"FAILED"}']
+                except SecurityError as e:
+                    print(str(e))
+                    database.roll_back()
+                    return ['{"status":"DENIED"}']
+                
+                status_list.append(message)
                 i += 1
 
             # 'default delegator = p'
