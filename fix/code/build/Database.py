@@ -160,7 +160,7 @@ class Database:
         if caller != user_taking_rights and caller != "admin" and caller != user_losing_rights:
             raise SecurityError("Caller must be admin or user losing or taking rights")
             
-        if caller == user_taking_rights and target != 'all':
+        if caller == user_taking_rights and target != 'all' and caller != "admin":
             if target not in self.user[caller]['d']:
                raise SecurityError("user_taking_rights does not have delegation power")
         
@@ -169,7 +169,7 @@ class Database:
                 self.user[user_losing_rights][right].discard(item)
 
         else:
-            self.user[user_getting_rights][right].discard(target)    
+            self.user[user_losing_rights][right].discard(target)    
         
         
         # all users or single user
