@@ -1,0 +1,1 @@
+Setting and deleting delegations were not properly checking permissions for non-admin principals. Added the correct delegate permission check for non-admin principals in both the set_delegation and delete_delegation functions in Database.py
