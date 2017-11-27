@@ -1,0 +1,1 @@
+Parser was not checking for the keyword all when considering the set delegation tgt. Added this check on line 884, so parser now passes on an identifier or the keyword all for a target. In the database, if the current principal is admin then the user getting rights is given the right on all global variables. Since, by default, the admin has all permissions for all variables.
