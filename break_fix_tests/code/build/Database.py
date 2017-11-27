@@ -24,10 +24,6 @@ class Database:
         self.user['admin']['password'] = 'admin'
         self.user['anyone'] = {}
         self.user['anyone']['password'] = '#'
-        self.user['anyone']['r'] = set()
-        self.user['anyone']['w'] = set()
-        self.user['anyone']['a'] = set()
-        self.user['anyone']['d'] = set()
         self.var = {} # global variables only
         self.local = {} # local variables, clear after program
         self.security_stack = []
@@ -76,16 +72,13 @@ class Database:
         
         self.user[new_user]["password"] = password
         
-        self.user[new_user]["r"] = set()
-        self.user[new_user]["w"] = set()
-        self.user[new_user]["a"] = set()
-        self.user[new_user]["d"] = set()
-        
-        for delegate in self.user[self.default_delegator]['d']:
-            self.user[new_user]["r"].add(delegate)
-            self.user[new_user]["w"].add(delegate)
-            self.user[new_user]["a"].add(delegate)
-            self.user[new_user]["d"].add(delegate)   
+        for item in self.security_stack:
+            if self.check_permission('d', self.default_delegator, item[0]):
+                print("TEST")
+                self.set_delegation('admin', self.default_delegator, 'r', item[0], new_user)
+                self.set_delegation('admin', self.default_delegator, 'w', item[0], new_user)
+                self.set_delegation('admin', self.default_delegator, 'a', item[0], new_user)
+                self.set_delegation('admin', self.default_delegator, 'd', item[0], new_user)
             
         return '{"status":"CREATE_PRINCIPAL"}'
         
