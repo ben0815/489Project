@@ -1,0 +1,1 @@
+The TCPServer was only exiting the TCPServer thread with exit code 0, and not the main thread. In order to solve this, changed exit(0) on line 143 to os._exit(0). The os._exit(0) call also exits the main thread with exit code 0, thus solving the problem.
