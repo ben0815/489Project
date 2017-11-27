@@ -133,7 +133,7 @@ class Database:
             if target not in self.user[caller]['d']:
                raise SecurityError("user_giving_rights does not have delegation power") 
 
-        if target == "all":
+        if target == "all" and user_getting_rights != "admin":
             if caller == "admin":
                 for item in self.var:
                     self.user[user_getting_rights][right].add(item)
@@ -165,9 +165,13 @@ class Database:
             if target not in self.user[caller]['d']:
                raise SecurityError("user_taking_rights does not have delegation power")
         
-        if target == "all":
-            for item in self.user[user_taking_rights]['d']:
-                self.user[user_losing_rights][right].discard(item)
+        if target == "all" and user_losing_rights != "admin":
+            if caller == "admin":
+                for item in self.var:
+                    self.user[user_losing_rights][right].discard(item)  
+            else:
+                for item in self.user[user_taking_rights]['d']:
+                    self.user[user_losing_rights][right].discard(item)
 
         else:
             if user_losing_rights != 'admin':
