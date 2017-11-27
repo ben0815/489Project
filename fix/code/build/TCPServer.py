@@ -2,6 +2,7 @@ import sys
 import socketserver
 import signal
 import time
+import os
 from Error import Timeout
 from Error import ParseError
 from Parser import Parser
@@ -139,4 +140,4 @@ class TCPHandler(socketserver.BaseRequestHandler):
             self.request.sendall(response.encode('utf-8'))
 
             if exit:
-                exit(0)
+                os._exit(0)
