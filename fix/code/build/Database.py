@@ -33,6 +33,7 @@ class Database:
         
         # state dictionaries are used to store the state of the program when a command is being run
         # at rollback just set user, var to their initial states
+        self.security_stack = []
         self.user_state = {}
         self.var_state = {}
         self.delegator_state = "anyone"
@@ -61,8 +62,67 @@ class Database:
         
         self.user_state = copy.deepcopy(self.user)
         self.var_state = copy.deepcopy(self.var)
-        self.delegator_state = copy.deepcopy(self.default_delegator) 
-    
+        self.delegator_state = copy.deepcopy(self.default_delegator)
+        self.security_stack_state = copy.deepcopy(self.security_stack) 
+
+    # Check that a user has permission. That is: security stack has granted them the permission, and granting user has the permission.
+    # Or anyone has the permission
+    def check_permission(self, permission, name, element):
+        for item in self.security_stack:
+            if item[0] == element and item[2] == permission and (item[3] == name or item[3] == 'anyone'):
+                if item[1] == 'admin':
+                    return True
+                else:
+                    return self.check_permission(permission, item[1], element)
+
+        return False
+
+    # check if a delete delegation is in the stack
+    # return the indices of the set delegations in the stack (in reverse order for deletions)
+    def get_in_security_stack(self, target, taking, right, losing):
+        indices = []
+
+        for i in range(0, len(self.security_stack)):
+            if target == self.security_stack[i][0] and taking == self.security_stack[i][1] and right == self.security_stack[i][2] and losing == self.security_stack[i][3]:
+                indices.append(i)
+
+        return indices[::-1]
+
+    def get_delegations(self, user):
+        valid = []
+
+        for item in self.security_stack:
+            if user == item[3] and 'd' == item[2]:
+                if self.check_permission('d', user, item[0]):
+                    valid.append(item[0])
+
+        return valid
+
+    def get_default_permissions(self):
+        items = []
+
+        for layer in self.security_stack:
+            if layer[3] == self.default_delegator and layer[2] == 'd':
+                if self.check_permission('d', self.default_delegator, layer[0]):
+                    items.append(layer[0])
+        
+        return items
+
+    def get_default_stack(self, items):
+        permissions = []
+
+        for item in items:
+            if self.check_permission('r', self.default_delegator, item):
+                permissions.append((item, 'r'))
+            if self.check_permission('w', self.default_delegator, item):
+                permissions.append((item, 'w'))
+            if self.check_permission('a', self.default_delegator, item):
+                permissions.append((item, 'a'))
+            if self.check_permission('d', self.default_delegator, item):
+                permissions.append((item, 'd'))
+
+        return permissions
+
     def create_principal(self, caller, new_user, password):
         if new_user in self.user:
             raise ParseError("Principal of name " + new_user + " already exists.")
@@ -74,16 +134,14 @@ class Database:
         
         self.user[new_user]["password"] = password
         
-        self.user[new_user]["r"] = set()
-        self.user[new_user]["w"] = set()
-        self.user[new_user]["a"] = set()
-        self.user[new_user]["d"] = set()
-        
-        for delegate in self.user[self.default_delegator]['d']:
-            self.user[new_user]["r"].add(delegate)
-            self.user[new_user]["w"].add(delegate)
-            self.user[new_user]["a"].add(delegate)
-            self.user[new_user]["d"].add(delegate)   
+        delegator_permissions = self.get_default_permissions()
+
+        new_stack_permissions = self.get_default_stack(delegator_permissions)
+
+        print(new_stack_permissions)
+
+        for permission in new_stack_permissions:
+            self.set_delegation('admin', self.default_delegator, permission[1], permission[0], new_user) 
             
         return '{"status":"CREATE_PRINCIPAL"}'
         
@@ -100,16 +158,16 @@ class Database:
         
     # set is a keyword in python actually
     def set_command(self, caller, var_name, value):
-        if caller != 'admin' and var_name in self.var and var_name not in self.user[caller]['w'] and var_name not in self.user["anyone"]['w']:
+        if caller != 'admin' and var_name in self.var and not self.check_permission('w', caller, var_name):
             raise SecurityError("No write permission")
              
         if var_name not in self.local and var_name not in self.var:
             self.var[var_name] = value
             if caller != 'admin':
-                self.user[caller]['r'].add(var_name)
-                self.user[caller]['w'].add(var_name)
-                self.user[caller]['a'].add(var_name)
-                self.user[caller]['d'].add(var_name)
+                self.set_delegation('admin', 'admin', 'r', var_name, caller)
+                self.set_delegation('admin', 'admin', 'w', var_name, caller)
+                self.set_delegation('admin', 'admin', 'a', var_name, caller)
+                self.set_delegation('admin', 'admin', 'd', var_name, caller)
         elif var_name in self.local:
             self.local[var_name] = value
         elif var_name in self.var:
@@ -130,19 +188,26 @@ class Database:
             raise SecurityError("Caller must be admin or the user user_giving_rights")
             
         if target != 'all' and caller == user_giving_rights and caller != 'admin':
-            if target not in self.user[caller]['d']:
+            if not self.check_permission('d',caller,target):
                raise SecurityError("user_giving_rights does not have delegation power") 
 
-        if target == "all":
+        if target == "all" and user_getting_rights != "admin":
             if caller == "admin":
                 for item in self.var:
-                    self.user[user_getting_rights][right].add(item)
+                    # Add this set delegation to the security stack
+                    stack = [item, user_giving_rights, right, user_getting_rights]
+                    self.security_stack.append(stack)
             else:
-                for item in self.user[user_giving_rights]['d']:
-                    self.user[user_getting_rights][right].add(item) # should I check to see if right is rwad,or is this already done?
+                for item in self.get_delegations(user_giving_rights):
+                    # Add this set delegation to the security stack
+                    stack = [item, user_giving_rights, right, user_getting_rights]
+                    self.security_stack.append(stack)
 
         else: # set a specific right
-            self.user[user_getting_rights][right].add(target)
+            if user_getting_rights != 'admin':
+                # Add this set delegation to the security stack
+                stack = [target, user_giving_rights, right, user_getting_rights]
+                self.security_stack.append(stack)
         
         return '{"status":"SET_DELEGATION"}'
 
@@ -160,24 +225,28 @@ class Database:
         if caller != user_taking_rights and caller != "admin" and caller != user_losing_rights:
             raise SecurityError("Caller must be admin or user losing or taking rights")
             
-        if caller == user_taking_rights and target != 'all':
-            if target not in self.user[caller]['d']:
+        if caller == user_taking_rights and target != 'all' and caller != "admin":
+            if not self.check_permission('d',caller,target):
                raise SecurityError("user_taking_rights does not have delegation power")
         
-        if target == "all":
-            for item in self.user[user_taking_rights]['d']:
-                self.user[user_losing_rights][right].discard(item)
+        if target == "all" and user_losing_rights != "admin":
+            if caller == "admin":
+                for item in self.var:
+                    indices = self.get_in_security_stack(item, user_taking_rights, right, user_losing_rights)
+                    for index in indices:
+                        del self.security_stack[index]
+            else:
+                for item in self.get_delegations(user_giving_rights):
+                    indices = self.get_in_security_stack(item, user_taking_rights, right, user_losing_rights)
+                    for index in indices:
+                        del self.security_stack[index]
 
         else:
-            self.user[user_getting_rights][right].discard(target)    
+            if user_losing_rights != 'admin':
+                indices = self.get_in_security_stack(target, user_taking_rights, right, user_losing_rights)
+                for index in indices:
+                    del self.security_stack[index]
         
-        
-        # all users or single user
-        if user_losing_rights == "anyone":
-            pass
-        else:
-            pass
-            
         return '{"status":"DELETE_DELEGATION"}'
 
     # local
@@ -198,7 +267,7 @@ class Database:
         if list_name not in self.var and list_name not in self.local:
             raise ParseError("List doesn't exist.")
         
-        if caller != 'admin' and list_name in self.var and list_name not in self.user[caller]['w'] and list_name not in self.user[caller]['a'] and list_name not in self.user["anyone"]['w'] and list_name not in self.user["anyone"]['a']:
+        if caller != 'admin' and list_name in self.var and not self.check_permission('w', caller, list_name) and not self.check_permission('a', caller, list_name):
             raise SecurityError("User can't append.")
         
         the_list = None
@@ -247,7 +316,7 @@ class Database:
     def get_identifier_value(self, caller, identifier):
         if identifier not in self.local and identifier not in self.var:
             raise ParseError("Doesn't exist")
-        elif caller != 'admin' and identifier in self.var and identifier not in self.user[caller]['r'] and identifier not in self.user["anyone"]['r']:
+        elif caller != 'admin' and identifier in self.var and not self.check_permission('r', caller, identifier):
             raise SecurityError("Caller cannot read that variable")
         
         if identifier in self.var:
@@ -259,7 +328,7 @@ class Database:
     def get_record_value(self, caller, record, value):
         if record not in self.local and record not in self.var:
             raise ParseError("Doesn't exist")
-        elif caller != 'admin' and record in self.var and record not in self.user[caller]['r'] and record not in self.user["anyone"]['r']:
+        elif caller != 'admin' and record in self.var and not self.check_permission('r', caller, record):
             raise SecurityError("Caller cannot read that variable") 
          
         variable = None 
@@ -282,7 +351,7 @@ class Database:
         if x not in self.var and x not in self.local:
             raise ParseError("List doesn't exist.")
         
-        if caller != 'admin' and x in self.var and (x not in self.user[caller]['w'] or x not in self.user[caller]['r']) and (x not in self.user["anyone"]["w"] or x not in self.user["anyone"]["r"]):
+        if caller != 'admin' and x in self.var and (not self.check_permission('w', caller, x) or not self.check_permission('r', caller, x)):
             raise SecurityError("User can't for each.")
             
         if y in self.var or y in self.local:
@@ -302,4 +371,5 @@ class Database:
         self.var = copy.deepcopy(self.var_state)
         self.user = copy.deepcopy(self.user_state)
         self.default_delegator = copy.deepcopy(self.delegator_state)
+        self.security_stack = copy.deepcopy(self.security_stack_state)
         self.clear_local()
